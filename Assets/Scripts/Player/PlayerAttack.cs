@@ -20,13 +20,17 @@ public class PlayerAttack : MonoBehaviour
     private float ComboDelay = 0.075f;
     private float ComboCooldown = 0.0f;
     private float ComboMovementCooldown = 0.0f;
-
     private int comboIndex = 0;
 
+    public Sprite PistolSprite;
+    public Sprite GrenadeSprite;
+    public GameObject Bullet;
+    public GameObject Grenade;
 
     private Rigidbody2D rb;
     private PlayerMovement playerMovement;
     private Animator animator;
+    private SpriteRenderer SecondaryWeapon;
 
     void Start()
     {
@@ -34,6 +38,10 @@ public class PlayerAttack : MonoBehaviour
         playerMovement = GetComponent<PlayerMovement>();
         animator = GetComponent<Animator>();
 
+        SecondaryWeapon = transform.Find("PlayerSprite/Torso1/Torso2/Torso3/ArmRight1/ArmRight2/HandRight/SecondaryWeaponSprite").GetComponent<SpriteRenderer>();
+
+
+        Bullet.SetActive(false);
     }
 
 
@@ -54,13 +62,16 @@ public class PlayerAttack : MonoBehaviour
             animator.SetBool("IsInCombo",true); 
             IsJumping = false;
             can_jump = false;
-            }
+        }
         else 
         { 
             animator.SetBool("IsInCombo",false); 
             ComboTimedAction1 = true;
         }
 
+
+        if (comboIndex > 3000 && comboIndex < 4000) { SecondaryWeapon.sprite = PistolSprite; }
+        else if (comboIndex > 4000 && comboIndex < 5000) { SecondaryWeapon.sprite = GrenadeSprite; }
 
 
 
@@ -220,6 +231,7 @@ public class PlayerAttack : MonoBehaviour
             ComboCooldown = 1.15f;
             ComboMovementCooldown = 1.15f;
             ComboDisableInputMovement = true;
+            AttackCutlass();
             Debug.Log("Big Slash"); 
         }
         else if (IsWalking && !IsJumping) 
@@ -227,6 +239,7 @@ public class PlayerAttack : MonoBehaviour
             comboIndex = 2002;
             ComboCooldown = 1f;
             ComboMovementCooldown = 0f;
+            AttackCutlass();
             Debug.Log("Slash");
         }
         else if ((IsJumping || IsFalling) && !IsWalking) 
@@ -235,6 +248,7 @@ public class PlayerAttack : MonoBehaviour
             ComboCooldown = 0.85f; 
             ComboMovementCooldown = 0.85f;
             ComboDisableInputMovement = true;
+            AttackCutlass();
             Debug.Log("Uppercut"); 
         }
         else if (IsDucking && !IsWalking) 
@@ -243,6 +257,7 @@ public class PlayerAttack : MonoBehaviour
             ComboCooldown = 0.75f; 
             ComboMovementCooldown = 0.75f;
             ComboDisableInputMovement = true;
+            AttackCutlass();
             Debug.Log("AOE Sweep the leg"); 
         }
         else if (IsJumping && IsWalking) 
@@ -251,18 +266,41 @@ public class PlayerAttack : MonoBehaviour
             ComboCooldown = 1.6f; 
             ComboMovementCooldown = 1.6f;
             ComboDisableInputMovement = true;
+            AttackCutlass();
             Debug.Log("Throw"); 
         }
     }
 
     private void ComboStartPistol()
     {
-        comboIndex = 3000;
+        
+
+        if (!(IsFalling || IsJumping))
+        {
+            comboIndex = 3001;
+            ComboCooldown = 3.25f; 
+            ComboMovementCooldown = 3.25f;
+            ComboDisableInputMovement = true;
+            Debug.Log("Pistol"); 
+        }
     }
 
     private void ComboStartGrenade()
     {
-        comboIndex = 4000;
+        if (!IsDucking) {
+            comboIndex = 4001;
+            ComboCooldown = 2.4f; 
+            ComboMovementCooldown = 2.4f;
+            ComboDisableInputMovement = true;
+            Debug.Log("Grenade!!!"); 
+        }
+        else if (IsDucking) {
+            comboIndex = 4002;
+            ComboCooldown = 1f; 
+            ComboMovementCooldown = 1f;
+            ComboDisableInputMovement = true;
+            Debug.Log("Grenade Plant!!!"); 
+        }
     }
 
     private void ComboStartGrapple()
@@ -306,7 +344,7 @@ public class PlayerAttack : MonoBehaviour
     }
     private void ComboPistol()
     {
-        
+
     }
     private void ComboGrenade()
     {
@@ -316,6 +354,54 @@ public class PlayerAttack : MonoBehaviour
     {
         
     }
+
+
+
+
+
+////////////////////////////////////////////////////////////////////////
+// W E A P O N   L O G I C
+////////////////////////////////////////////////////////////////////////
+
+    private void AttackCutlass()
+    {
+        
+    }
+
+    private void AttackPistol()
+    {
+        GameObject new_bullet;
+        Vector2 direction;
+        Vector3 bullet_pos = SecondaryWeapon.transform.Find("Muzzle").position;
+
+        if (transform.eulerAngles.y == 0) { direction = new Vector2(-1,0); }
+        else { direction = new Vector2(1,0); }
+        
+        new_bullet = Instantiate(Bullet, bullet_pos, Quaternion.identity);
+        new_bullet.GetComponent<Gunshot>().Direction = direction;
+        if (direction.x > 0) { new_bullet.GetComponent<SpriteRenderer>().flipX = true; }
+        new_bullet.SetActive(true);
+    }
+
+    private void AttackGrenade()
+    {
+        GameObject new_grenade;
+        Vector3 grenade_pos = SecondaryWeapon.transform.position;
+        Vector2 grenade_velocity;
+
+        if (transform.eulerAngles.y == 0) { grenade_velocity = new Vector2(-1,1); }
+        else { grenade_velocity = new Vector2(1,1); }
+
+        new_grenade = Instantiate(Grenade, grenade_pos, Quaternion.identity);
+        new_grenade.GetComponent<Grenade>().Velocity = grenade_velocity;
+        new_grenade.SetActive(true);
+    }
+
+    private void AttackGrapple()
+    {
+        
+    }
+
 
 
 
