@@ -3,7 +3,19 @@
 --- !u!78 &1
 TagManager:
   serializedVersion: 3
-  tags: []
+  tags:
+  - ShipTrigger_UpperDeck
+  - ShipTrigger_LowerDeck
+  - ShipTrigger_CrowsNest
+  - ShipTrigger_Ladder
+  - ShipTrigger_Platform
+  - ShipTrigger_GrapplePoint
+  - ShipTrigger_Jump
+  - ShipTrigger_JumpFlip
+  - ShipTrigger_SomerSault
+  - ShipTrigger_StaircaseLeft
+  - ShipTrigger_StaircaseRight
+  - ShipTrigger_LadderOcean
   layers:
   - Default
   - TransparentFX
@@ -11,8 +23,8 @@ TagManager:
   - 
   - Water
   - UI
-  - 
-  - 
+  - Hull
+  - Player_Bot
   - 
   - 
   - 

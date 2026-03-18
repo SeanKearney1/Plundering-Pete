@@ -6,7 +6,7 @@ public class UIButtons : MonoBehaviour
 
     public void Play()
     {
-        
+        SceneManager.LoadScene("Level1_1");
     }
     public void Levels() 
     {

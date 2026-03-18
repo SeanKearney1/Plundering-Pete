@@ -10,7 +10,7 @@ GameObject:
   m_Component:
   - component: {fileID: 6188130442584298894}
   - component: {fileID: 9215191134229986256}
-  m_Layer: 0
+  m_Layer: 7
   m_Name: Grenade
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -100,7 +100,7 @@ GameObject:
   m_Component:
   - component: {fileID: 8062858426598103095}
   - component: {fileID: 6746764715106977941}
-  m_Layer: 0
+  m_Layer: 7
   m_Name: LegRight1
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -191,7 +191,7 @@ GameObject:
   m_Component:
   - component: {fileID: 2937276786753259365}
   - component: {fileID: 1742150372190825156}
-  m_Layer: 0
+  m_Layer: 7
   m_Name: ArmLeft2
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -282,7 +282,7 @@ GameObject:
   m_Component:
   - component: {fileID: 8242374058383623606}
   - component: {fileID: 6555515315159260989}
-  m_Layer: 0
+  m_Layer: 7
   m_Name: HolsterWeaponSprite
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -372,7 +372,7 @@ GameObject:
   m_Component:
   - component: {fileID: 6351484743390153012}
   - component: {fileID: 257628171160054253}
-  m_Layer: 0
+  m_Layer: 7
   m_Name: ArmRight1
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -463,7 +463,7 @@ GameObject:
   m_Component:
   - component: {fileID: 7187381305744928127}
   - component: {fileID: 1021964003261718924}
-  m_Layer: 0
+  m_Layer: 7
   m_Name: LegLeft1
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -554,7 +554,7 @@ GameObject:
   m_Component:
   - component: {fileID: 8440582592295033683}
   - component: {fileID: 4363667532587082222}
-  m_Layer: 0
+  m_Layer: 7
   m_Name: Torso2
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -645,7 +645,7 @@ GameObject:
   m_Component:
   - component: {fileID: 5938602213124065425}
   - component: {fileID: 6276735212986219005}
-  m_Layer: 0
+  m_Layer: 7
   m_Name: ArmLeft1
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -736,7 +736,7 @@ GameObject:
   m_Component:
   - component: {fileID: 6902307518358952331}
   - component: {fileID: 7532152245507723510}
-  m_Layer: 0
+  m_Layer: 7
   m_Name: ArmRight2
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -827,10 +827,10 @@ GameObject:
   m_Component:
   - component: {fileID: 1811286742539559526}
   - component: {fileID: 4118199073792050241}
-  - component: {fileID: 4389477329522823914}
-  - component: {fileID: 803610845558887643}
+  - component: {fileID: 6968290908900120365}
+  - component: {fileID: 7685768820163187430}
   - component: {fileID: 2552064716466250916}
-  m_Layer: 0
+  m_Layer: 7
   m_Name: Bot
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -882,7 +882,7 @@ Rigidbody2D:
   m_SleepingMode: 1
   m_CollisionDetection: 1
   m_Constraints: 4
---- !u!114 &4389477329522823914
+--- !u!114 &6968290908900120365
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -891,12 +891,10 @@ MonoBehaviour:
   m_GameObject: {fileID: 2991397423479210333}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: c00c9e22a654f5d40aff20a6bbf7e504, type: 3}
+  m_Script: {fileID: 11500000, guid: ec70d9adc47de2e4fb4a53e6f96e4803, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::PlayerMovement
-  moveSpeed: 7
-  jumpHeight: 15
---- !u!114 &803610845558887643
+  m_EditorClassIdentifier: Assembly-CSharp::BotLogic
+--- !u!114 &7685768820163187430
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -907,11 +905,14 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: e236674da99fce74b9c9c5a0ea047739, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::PlDyerAttack
-  PistolSprite: {fileID: 21300000, guid: 791ca974d5dabb64f966517e5f279338, type: 3}
-  GrenadeSprite: {fileID: 21300000, guid: de4372c947bcbf34a85ccefc25a0e50a, type: 3}
-  Bullet: {fileID: 6024141361166266347, guid: 58428f13bcc9b6445884a7c10495838e, type: 3}
-  Grenade: {fileID: 6380196046138468741, guid: 12bc5690477661b44bba314c2d269369, type: 3}
+  m_EditorClassIdentifier: Assembly-CSharp::MovementLogic
+  PlatformCollision: {fileID: 0}
+  moveSpeed: 0
+  jumpHeight: 0
+  PistolSprite: {fileID: 0}
+  GrenadeSprite: {fileID: 0}
+  Bullet: {fileID: 0}
+  Grenade: {fileID: 0}
 --- !u!95 &2552064716466250916
 Animator:
   serializedVersion: 7
@@ -944,7 +945,7 @@ GameObject:
   m_Component:
   - component: {fileID: 6492933862189691079}
   - component: {fileID: 8477347927865398814}
-  m_Layer: 0
+  m_Layer: 7
   m_Name: HitBox
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -1012,7 +1013,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 1361035523307289198}
-  m_Layer: 0
+  m_Layer: 7
   m_Name: Muzzle
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -1044,7 +1045,7 @@ GameObject:
   m_Component:
   - component: {fileID: 8173195098253258947}
   - component: {fileID: 8000805627769848123}
-  m_Layer: 0
+  m_Layer: 7
   m_Name: LegLeft2
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -1134,7 +1135,7 @@ GameObject:
   m_Component:
   - component: {fileID: 3278821968090810235}
   - component: {fileID: 1704511995035937646}
-  m_Layer: 0
+  m_Layer: 7
   m_Name: Torso3
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -1227,7 +1228,7 @@ GameObject:
   m_Component:
   - component: {fileID: 7181041249053892244}
   - component: {fileID: 2387682144269064409}
-  m_Layer: 0
+  m_Layer: 7
   m_Name: Head
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -1319,7 +1320,7 @@ GameObject:
   m_Component:
   - component: {fileID: 2808039518614524472}
   - component: {fileID: 5460320239412622588}
-  m_Layer: 0
+  m_Layer: 7
   m_Name: Hat
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -1409,7 +1410,7 @@ GameObject:
   m_Component:
   - component: {fileID: 376439816144612393}
   - component: {fileID: 2645129607392877941}
-  m_Layer: 0
+  m_Layer: 7
   m_Name: SecondaryWeaponSprite
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -1500,7 +1501,7 @@ GameObject:
   m_Component:
   - component: {fileID: 2388437585983744410}
   - component: {fileID: 8567424587870528558}
-  m_Layer: 0
+  m_Layer: 7
   m_Name: Torso1
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -1594,7 +1595,7 @@ GameObject:
   m_Component:
   - component: {fileID: 5283117331022814977}
   - component: {fileID: 453439369467457505}
-  m_Layer: 0
+  m_Layer: 7
   m_Name: HandLeft
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -1684,7 +1685,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 2553396074406455417}
-  m_Layer: 0
+  m_Layer: 7
   m_Name: PlayerSprite
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -1717,7 +1718,7 @@ GameObject:
   m_Component:
   - component: {fileID: 6710911524712961410}
   - component: {fileID: 5458881759634292984}
-  m_Layer: 0
+  m_Layer: 7
   m_Name: CollisionBox
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -1786,7 +1787,7 @@ GameObject:
   m_Component:
   - component: {fileID: 3208256382937379531}
   - component: {fileID: 4336572721308004377}
-  m_Layer: 0
+  m_Layer: 7
   m_Name: LegRight2
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -1876,7 +1877,7 @@ GameObject:
   m_Component:
   - component: {fileID: 5009599775255766418}
   - component: {fileID: 1739046298849055969}
-  m_Layer: 0
+  m_Layer: 7
   m_Name: HandRight
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -1967,7 +1968,7 @@ GameObject:
   m_Component:
   - component: {fileID: 2669080707101124554}
   - component: {fileID: 4318728630812423417}
-  m_Layer: 0
+  m_Layer: 7
   m_Name: WeaponSprite
   m_TagString: Untagged
   m_Icon: {fileID: 0}
