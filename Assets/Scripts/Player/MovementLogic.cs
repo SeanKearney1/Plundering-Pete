@@ -1,5 +1,7 @@
 using System;
 using System.Collections;
+using System.Collections.Generic;
+using System.Runtime.Serialization.Formatters;
 using Unity.VisualScripting;
 using UnityEngine;
 
@@ -7,6 +9,8 @@ using UnityEngine;
 
 public class MovementLogic : MonoBehaviour
 {
+    private bool ScriptEnabled = true;
+
     private bool IsUsingMovmentCombo;
     private bool IsUsingCutlass;
     private bool IsUsingPistol;
@@ -17,6 +21,8 @@ public class MovementLogic : MonoBehaviour
     private bool IsTryingToJump;
     private bool IsFalling;
     private bool IsWalking;
+    private bool IsHurting = false;
+    private int CauseOfDamage;
     private bool ComboDisableInputMovement = false;
     private bool can_jump = true;
     private Vector2 Look = new Vector2(0,0);
@@ -28,16 +34,25 @@ public class MovementLogic : MonoBehaviour
     private int comboIndex = 0;
 
 
+    private GameObject CurOceanLadder;
+    private bool OnOceanLadder = false;
+    private bool InitialedOceanLadderProcess = true;
+    private List<Vector2> OceanLadderCheckoints;
+    private float OceanLadderMovementSpeed = 5;
+
+
     private Rigidbody2D rb;
     private Animator animator;
     private SpriteRenderer SecondaryWeapon;
     private CapsuleCollider2D hitBox;
     private CapsuleCollider2D playerCollision;
     private Vector2 hitboxColliderSize;
-    [SerializeField] BoxCollider2D PlatformCollision;
     private GameObject CurCollidedLadder;
     private GameObject LadderBeingUsed;
     private bool SnappedPlayerToLadder = false;
+    private GameObject Poseidon;
+    private GameObject healthBarMask;
+    private GameObject healthBarBackground;
 
     public float moveSpeed;
     public float jumpHeight;
@@ -46,11 +61,14 @@ public class MovementLogic : MonoBehaviour
     public GameObject Bullet;
     public GameObject Grenade;
 
+
     void Start()
     {
         // Fetching Components.
         rb = GetComponent<Rigidbody2D>();
         animator = GetComponent<Animator>();
+        healthBarMask = transform.Find("HealthBar").gameObject;
+        healthBarBackground = transform.Find("HealthBarBackground").gameObject;
         hitBox = transform.Find("HitBox").GetComponent<CapsuleCollider2D>();
         playerCollision = transform.Find("CollisionBox").GetComponent<CapsuleCollider2D>();
         SecondaryWeapon = transform.Find("PlayerSprite/Torso1/Torso2/Torso3/ArmRight1/ArmRight2/HandRight/SecondaryWeaponSprite").GetComponent<SpriteRenderer>();
@@ -64,11 +82,57 @@ public class MovementLogic : MonoBehaviour
 
     void Update()
     {
-        JumpValidator();
+        if (ScriptEnabled) {
+            if (!OnOceanLadder) { NormalMovementLogic(); }
+            else { OceanLadderLogic(); }
+        }
+    }
 
-        if (rb.linearVelocityY != 0) { IsFalling = true; }
+    void FixedUpdate()
+    { 
+        if (ScriptEnabled && !(ComboDisableInputMovement || OnOceanLadder))
+        {
+            if (LadderBeingUsed.IsUnityNull()) {
+                MoveLogic();
+                if (!CurCollidedLadder.IsUnityNull()) { StartCoroutine(OneWayPlatformLogic()); }
+            }
+            else { LadderLogic(); }
+        }
+    }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    private void NormalMovementLogic()
+    {
+        if (LadderBeingUsed.IsUnityNull()) { JumpValidator(); }
+        else { IsJumping = false; }
+
+        if (Math.Abs(rb.linearVelocityY) > 1) { IsFalling = true; }
         else { IsFalling = false; }
         
+
 
         if (!(IsUsingCutlass || IsUsingPistol || IsUsingGrenade || IsUsingGrapple || IsWalking || IsJumping || IsFalling || IsDucking))
         {
@@ -77,44 +141,28 @@ public class MovementLogic : MonoBehaviour
 
         UpdateAnimator();
 
-        Countdowns();
-
 
         if (ValidateNextCombo()) { ComboStartLogic(); }
-
 
 
 
         if (comboIndex > 3000 && comboIndex < 4000) { SecondaryWeapon.sprite = PistolSprite; }
         else if (comboIndex > 4000 && comboIndex < 5000) { SecondaryWeapon.sprite = GrenadeSprite; }
 
-
-
-    }
-
-    void FixedUpdate()
-    {
-        if (!ComboDisableInputMovement)
-        {
-            if (LadderBeingUsed.IsUnityNull()) {
-                MoveLogic();
-                if (!CurCollidedLadder.IsUnityNull()) { StartCoroutine(OneWayPlatformLogic()); }
-            }
-            else { LadderLogic(); }
-        }
-        
+        Countdowns();
     }
 
 
 
-
-
 //////////////////////////////////////////////////////////////////////////////////////////////
-//  M  O  V  E  M  E  N  T
+//  G E T T E R S   A N D   S E T T E R S
 //////////////////////////////////////////////////////////////////////////////////////////////
+
+    public void Enable(bool enabler) { ScriptEnabled = enabler; }
 
     public void UpdateComboBeginTimeStamp() { ComboBeginTimeStamp = Time.time; }
 
+    public void SetPoseidon(GameObject new_gamemanager) { Poseidon = new_gamemanager; }
     // Get inputs:
     public void Set_IsUsingMovmentCombo(bool var) { IsUsingMovmentCombo = var; }
     public void Set_IsUsingCutlass(bool var) { IsUsingCutlass = var; }
@@ -127,10 +175,20 @@ public class MovementLogic : MonoBehaviour
 
     public void Set_Look(Vector2 new_look) { Look = new_look; }
 
+    public void SetComboDelay(float new_delay) { ComboDelay = new_delay; }
 
 
+    public void SetDamageState(int damage_type)
+    {
+        CauseOfDamage = damage_type;
+        IsHurting = true;
+    }
 
 
+    public float Get_ComboCooldown() { return ComboCooldown; }
+    public float Get_ComboMovementCooldown() { return ComboMovementCooldown; }
+
+    public bool Get_OnOceanLadder() { return OnOceanLadder; }
 
 
     private void UpdateAnimator()
@@ -168,15 +226,27 @@ public class MovementLogic : MonoBehaviour
         }
 
 
-        flipSprite();
+        flipSprite(Look.x);
         rb.linearVelocity = new Vector2(moveX*moveSpeed,moveY);
     }
 
 
-    private void flipSprite()
+    public void flipSprite(float the_look)
     {
-        if (Look.x < 0.0)      { transform.eulerAngles = new Vector3(0, 0, 0); }
-        else if (Look.x > 0.0) { transform.eulerAngles = new Vector3(0,180,0); }
+        if (the_look < 0.0)
+        { 
+            transform.eulerAngles = new Vector3(0, 0, 0);
+            healthBarMask.transform.localPosition = new Vector3(-0.75f,healthBarMask.transform.localPosition.y, healthBarMask.transform.localPosition.z);
+            healthBarMask.transform.localScale = new Vector3(0.5f, healthBarMask.transform.localScale.y, healthBarMask.transform.localScale.z);
+            healthBarBackground.transform.localScale = new Vector3(-0.5f, healthBarBackground.transform.localScale.y, healthBarBackground.transform.localScale.z);
+        }
+        else if (the_look > 0.0)
+        {
+            transform.eulerAngles = new Vector3(0,180,0);
+            healthBarMask.transform.localPosition = new Vector3(0.75f,healthBarMask.transform.localPosition.y, healthBarMask.transform.localPosition.z);
+            healthBarMask.transform.localScale = new Vector3(-0.5f, healthBarMask.transform.localScale.y, healthBarMask.transform.localScale.z);
+            healthBarBackground.transform.localScale = new Vector3(-0.5f, healthBarBackground.transform.localScale.y, healthBarBackground.transform.localScale.z);
+        }
     }
 
 
@@ -187,14 +257,13 @@ public class MovementLogic : MonoBehaviour
 //  L  A  D  D  E  R      L  O  G  I  C
 ////////////////////////////////////////////////////////////////////////////////////////
 
-    public GameObject GetCurrentCollidedLadder() { return CurCollidedLadder; }
+    public GameObject IsOnLadder() { return LadderBeingUsed; }
 
 
     private void LadderLogic()
     {
         if (!SnappedPlayerToLadder)
         {
-            //transform.parent = LadderBeingUsed.transform;  
             SnappedPlayerToLadder = true;
             rb.gravityScale = 0;
         }
@@ -206,14 +275,13 @@ public class MovementLogic : MonoBehaviour
     {
         rb.linearVelocity = new Vector2(Look.x*moveSpeed,Look.y*moveSpeed);
 
-        flipSprite();
+        flipSprite(Look.x);
 
         if (!rb.IsTouching(LadderBeingUsed.GetComponent<BoxCollider2D>())) { ExitLadder(); }
     }
 
     private void ExitLadder()
     {
-        //transform.parent = null;
         SnappedPlayerToLadder = false;
         LadderBeingUsed = null;
         rb.gravityScale = 1;
@@ -226,20 +294,39 @@ public class MovementLogic : MonoBehaviour
 
     private void OnCollisionEnter2D(Collision2D collision)
     {
-        if (collision.gameObject.CompareTag("ShipTrigger_Ladder")) { CurCollidedLadder = collision.gameObject; }
+        if (collision.gameObject.CompareTag("ShipTrigger_Ladder"))
+        { 
+            CurCollidedLadder = collision.gameObject;
+            if (!LadderBeingUsed.IsUnityNull()) { LadderBeingUsed = CurCollidedLadder; }
+        }
     }
     private void OnCollisionExit2D(Collision2D collision)
     {
         if (collision.gameObject.CompareTag("ShipTrigger_Ladder")) { CurCollidedLadder = null; }
     }
 
+
+
+
+    private void OnTriggerEnter2D(Collider2D collision)
+    {
+        if (collision.gameObject.CompareTag("ShipTrigger_LadderOceanBottom"))
+        {
+            SetOceanLadder(collision.transform.parent.gameObject);
+        }
+    }
+
+
+
+
+
     private IEnumerator OneWayPlatformLogic()
     {
         if (IsDucking && transform.position.y > CurCollidedLadder.transform.position.y)
         {
-            PlatformCollision = CurCollidedLadder.GetComponent<BoxCollider2D>();
+            BoxCollider2D PlatformCollision = CurCollidedLadder.GetComponent<BoxCollider2D>();
             Physics2D.IgnoreCollision(playerCollision,PlatformCollision);
-            yield return new WaitForSeconds(0.25f);
+            yield return new WaitForSeconds(0.5f);
             Physics2D.IgnoreCollision(playerCollision,PlatformCollision,false);
         }
     }
@@ -276,7 +363,7 @@ public class MovementLogic : MonoBehaviour
 
     private bool ValidateNextCombo()
     {
-
+        if (IsHurting) { return true; }
         if (ComboBeginTimeStamp + ComboDelay > Time.time) { return false; }
         if (ComboCooldown != 0) { return false; }
 
@@ -320,7 +407,8 @@ public class MovementLogic : MonoBehaviour
 
     private void ComboStartLogic()
     {
-        if (!(IsUsingCutlass || IsUsingPistol || IsUsingGrenade || IsUsingGrapple) && (IsDucking || IsJumping || IsFalling || IsWalking)) { ComboStartMovement(); }
+        if (IsHurting) { ComboStartDamaged(); }
+        else if (!(IsUsingCutlass || IsUsingPistol || IsUsingGrenade || IsUsingGrapple) && (IsDucking || IsJumping || IsFalling || IsWalking)) { ComboStartMovement(); }
         else if (IsUsingCutlass) { ComboStartCutlass(); }
         else if (IsUsingPistol)  { ComboStartPistol();  }
         else if (IsUsingGrenade) { ComboStartGrenade(); }
@@ -454,6 +542,43 @@ public class MovementLogic : MonoBehaviour
 
 
 
+    private void ComboStartDamaged()
+    {
+        // Stumble
+        if (CauseOfDamage == 0) // Stumble Forward
+        {
+            comboIndex = 9001;
+        }
+        else if (CauseOfDamage == 1) // Stumble Backward
+        {
+            comboIndex = 9002;
+        }
+
+
+        // Fall
+        else if (CauseOfDamage == 2) // Fall Forward
+        {
+            comboIndex = 9003;
+        }
+        else if (CauseOfDamage == 3) // Fall Backward
+        {
+            comboIndex = 9004;
+        }
+
+        // Die
+        else if (CauseOfDamage == 4) // Die From Front
+        {
+            comboIndex = 9005;
+        }
+        else if (CauseOfDamage == 5) // Die From Back
+        {
+            comboIndex = 9006;
+        }
+
+        IsHurting = false;
+
+    }
+
 
 
 
@@ -481,12 +606,12 @@ public class MovementLogic : MonoBehaviour
 // W E A P O N   L O G I C
 ////////////////////////////////////////////////////////////////////////
 
-    private void AttackCutlass()
+    public void AttackCutlass()
     {
         
     }
 
-    private void AttackPistol()
+    public void AttackPistol()
     {
         GameObject new_bullet;
         Vector2 direction;
@@ -497,11 +622,12 @@ public class MovementLogic : MonoBehaviour
         
         new_bullet = Instantiate(Bullet, bullet_pos, Quaternion.identity);
         new_bullet.GetComponent<Gunshot>().Direction = direction;
+        new_bullet.GetComponent<Gunshot>().SetGameManager(Poseidon.GetComponent<GameManager>());
         if (direction.x > 0) { new_bullet.GetComponent<SpriteRenderer>().flipX = true; }
         new_bullet.SetActive(true);
     }
 
-    private void AttackGrenade()
+    public void AttackGrenade()
     {
         GameObject new_grenade;
         Vector3 grenade_pos = SecondaryWeapon.transform.position;
@@ -512,13 +638,90 @@ public class MovementLogic : MonoBehaviour
 
         new_grenade = Instantiate(Grenade, grenade_pos, Quaternion.identity);
         new_grenade.GetComponent<Grenade>().Velocity = grenade_velocity;
+        new_grenade.GetComponent<Grenade>().SetGameManager(Poseidon.GetComponent<GameManager>());
         new_grenade.SetActive(true);
     }
 
-    private void AttackGrapple()
+    public void AttackGrapple()
     {
         
     }
+
+
+
+
+
+
+////////////////////////////////////////////////////////////////////////
+// O C E A N   L A D D E R   L O G I C
+////////////////////////////////////////////////////////////////////////
+
+
+    public void SetOceanLadder(GameObject Cur_Ocean_Ladder)
+    {
+        List<Vector2> cps = Cur_Ocean_Ladder.GetComponent<OceanLadder>().LadderPoints;
+        CurOceanLadder = Cur_Ocean_Ladder;
+        OceanLadderCheckoints = new List<Vector2>();
+        // Prevents script from modifing original.
+        for (int i = 0; i < cps.Count; i++)
+        {
+            OceanLadderCheckoints.Add(new Vector2(cps[i].x,cps[i].y));
+            Debug.Log(OceanLadderCheckoints.Count-1);
+        }
+
+        OnOceanLadder = true;
+
+        
+    }
+
+
+    private void OceanLadderLogic()
+    {
+
+        
+
+        if (InitialedOceanLadderProcess)
+        {
+            if (CurOceanLadder.GetComponent<OceanLadder>().FacingWest) { flipSprite(1); }
+            else { flipSprite(-1); }
+
+            animator.SetInteger("ComboIdx",-69420);
+            rb.gravityScale = 0f;
+            rb.linearVelocity = new Vector2(0,0);
+            transform.parent = CurOceanLadder.transform;
+            transform.localPosition = new Vector3(OceanLadderCheckoints[0].x,OceanLadderCheckoints[0].y,transform.localPosition.z);
+            InitialedOceanLadderProcess = false;
+            playerCollision.enabled = false;
+        }
+
+        if (OceanLadderCheckoints.Count > 0)
+        {
+
+
+            Vector2 direction = (OceanLadderCheckoints[0] - new Vector2(transform.localPosition.x, transform.localPosition.y)).normalized;
+            transform.localPosition += new Vector3(direction.x,direction.y,transform.localPosition.z) * OceanLadderMovementSpeed * Time.deltaTime;
+
+
+            if (Math.Abs(transform.localPosition.y - OceanLadderCheckoints[0].y) < 0.01) 
+            {
+                OceanLadderCheckoints.RemoveAt(0);
+            }
+        }
+        else
+        {
+            rb.gravityScale = 1f;
+            transform.parent = null;
+            OnOceanLadder = false;
+            InitialedOceanLadderProcess = true;
+            playerCollision.enabled = true;
+        }
+    }
+
+
+
+
+
+
 
 
 

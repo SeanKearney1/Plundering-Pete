@@ -1,7 +1,9 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 public class Grenade : MonoBehaviour
 {
+    LayerMask layerMask;
     public Vector2 Speed;
     public float FuseTime;
     public float ExplosionDuration;
@@ -11,6 +13,7 @@ public class Grenade : MonoBehaviour
     private float blast_time = 0.35f;
     private float BeginTimeStamp;
     private Rigidbody2D rb;
+    private GameManager gameManager;
 
     void Start()
     {
@@ -20,20 +23,24 @@ public class Grenade : MonoBehaviour
         Velocity *= Speed;
         rb.linearVelocity = Velocity;
 
+        layerMask = LayerMask.GetMask("Hull");
 
         GetComponent<Animator>().SetFloat("FuseTime",1/FuseTime);
 
 
     }
 
+    public void SetGameManager( GameManager new_gamemanager) { gameManager = new_gamemanager; }
+
+
     void Update()
     {
         if (BeginTimeStamp + FuseTime <= Time.time)
         {
-            if (BeginTimeStamp + blast_time + ExplosionDuration + FuseTime > Time.time)
+            if (!HasExploded && BeginTimeStamp + blast_time + ExplosionDuration + FuseTime > Time.time)
             {
-                if (!HasExploded) { Explode(); }
-                ExplodeFade();
+                HasExploded = true;
+                Explode();
             }
             else
             {
@@ -47,12 +54,34 @@ public class Grenade : MonoBehaviour
 
     private void Explode()
     {
-        HasExploded = true;
         Instantiate(Smoke, transform.position, Quaternion.identity);
+        HurtVictims();
+
 
     }
-    private void ExplodeFade()
+
+
+
+
+    private void HurtVictims()
     {
-        
+        List<GameObject> victims = gameManager.GetEveryone();
+        BaseDamages baseDamages = new BaseDamages();
+        float cur_distance;
+
+        for (int i = 0; i < victims.Count; i++) {
+
+            cur_distance = (victims[i].transform.position - transform.position).magnitude;
+
+            if (cur_distance <= baseDamages.MaxGrenadeDistance && !Physics2D.Linecast(transform.position, victims[i].transform.position, layerMask, 0, 0))
+            {
+                Debug.Log("victims["+i+"] = "+victims[i]);
+                victims[i].GetComponent<HealthManager>().TookDamage(2, gameObject);
+            }
+        }
+
+
     }
+
+
 }

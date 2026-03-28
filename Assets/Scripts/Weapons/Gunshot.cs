@@ -7,6 +7,7 @@ public class Gunshot : MonoBehaviour
     public Vector2 Direction;
     public float FlashDuration;
     private float BeginTimeStamp;
+    private GameManager gameManager;
 
     private SpriteRenderer spriteRenderer;
     LayerMask layerMask;
@@ -28,6 +29,8 @@ public class Gunshot : MonoBehaviour
 
         FireBullet();
     }
+
+    public void SetGameManager( GameManager new_gamemanager) { gameManager = new_gamemanager; }
 
     // Update is called once per frame
     void Update()

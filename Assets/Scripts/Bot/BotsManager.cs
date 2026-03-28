@@ -1,9 +1,10 @@
+//using System;
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Runtime.CompilerServices;
+//using System.Linq;
+//using System.Runtime.CompilerServices;
 using Unity.VisualScripting;
-using UnityEditor.Animations;
+//using UnityEditor.Animations;
 using UnityEngine;
 
 public class BotsManager : MonoBehaviour
@@ -50,8 +51,8 @@ public class BotsManager : MonoBehaviour
 //      Hibernation - Is inactive inside a crate, barrel, or "Door"(Bot Spawner). 
 //
 //  Behavior Overrides:
-//      Retreat     - Find and go to a safe place from the current threat.
-//
+//      Retreat     - Find and go to a safe place from the current threat     ****SCRAPPED****--> or just run to a random spot so 20 bots aren't all making the players experience a living hell.
+//      Idle        - Just stands still for a bit so 20 bots aren't all making the players experience a living hell.
 //
 //
 //  Behavior Causes:
@@ -61,10 +62,11 @@ public class BotsManager : MonoBehaviour
 //
 //
 //  Behavior Variables:
-//      Bravery   - Low: Retreats last longer. Retreats at higher heath and further away from grenades.
-//      Intellect - Low: Retreats to less optimal positions, gets closer to player, idles longer.
-//      Agility   - High: Uses mobility moves more frequently.
-//      Mobility  - Flags: Crouch, Jump, Somersault, Jump Flip, Grapple.
+//      Aggression     - Low: After completing an action, has a low chance of idling for a bit.
+//      Bravery        - Low: Retreats last longer. Retreats at higher heath and further away from grenades.
+//      Intellect      - Low: Retreats to less optimal positions, gets closer to player, idles longer.
+//      Agility        - High: Uses mobility moves more frequently.
+//      Allowed Combos - Flags of allowed combo / mobility options.
 //      ----------------------------------------------------
 //      Damage Multiplier       - Increase/Decrease damage.
 //      Speed Multiplier        - Increase/Decrease speed.
@@ -90,7 +92,7 @@ public class BotsManager : MonoBehaviour
 //
 //  Manager Variables:
 //      Intellect Range         - Range for intellect among the bots.
-//      ----Aggression Range        - Range for aggression among the bots.
+//      Aggression Range        - Range for aggression among the bots.
 //      Damage Mult. Min & Max  - Min/Max for damage multiplier among the bots.
 //      Speed Mult. Min & Max   - Min/Max for speed multiplier among the bots.
 //      Wpn Spd Mult. Min & Max - Min/Max for weapon speed multiplier among the bots.
@@ -100,9 +102,6 @@ public class BotsManager : MonoBehaviour
 //      Review Defensive Delay  - How often to run a defense minimum check.
 //      Wake Up Time Min & Max  - Min/Max for how quickly bots leave hibernation when "summoned".
 //      Min Count to Rush       - Min amount of bots before all bots are set to offense.
-//      Allowed Mobility        - Flag of allowed mobility options.
-//      Mobility Bias           - Chance a bot will have any given allowed mobility flag.
-//
 //
 //
 //
@@ -134,6 +133,24 @@ public class BotsManager : MonoBehaviour
 //      6) Check if any bots should come out hibernation.
 //      7) Every "Review Defensive Delay" seconds run a "Stay Offense" update.
 //
+/////////////////////////////////////////////////////////////////////////////////////////////////////////
+//  B  O  T      C  O  M  B  O  S   //
+//////////////////////////////////////
+//
+//      1:   Somersault (1001)
+//      2:   Jump flip  (1002)
+//      4:   Big Slash  (2001)
+//      8:   Uppercut   (2003)
+//      16:  Block      (2004)
+//      32:  Throw      (2005)
+//      64:  Pistol     (3001)
+//      128: Grenade    (4001)
+//      256: Grapple    (5001-500X)
+//
+//
+//
+//
+//
 //
 /////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -143,15 +160,15 @@ public class BotsManager : MonoBehaviour
 
 
     [Header("Bot Starting Stats")]
+    public float BotGlobal_BehaviorAggressionPercent;
     public float BotGlobal_BehaviorBraveryPercent;
     public float BotGlobal_BehaviorIntellectPercent;
-    public int BotGlobal_MobilityPercent;
-    public float BotGlobal_MobilityBiasPercent;
+    public float BotGlobal_BehaviorMobilityPercent;
     public float BotGlobal_OffensePercent;
     public int BotGlobal_MinCountToRush;
     public int BotGlobal_MaxActive;
     public float BotGlobal_ReviewDefenseDelay;
-    
+
     private int BotGlobal_CurrentActive;
     private int BotGlobal_CurrentOffense;
     private int BotGlobal_CurrentDefense;
@@ -159,16 +176,16 @@ public class BotsManager : MonoBehaviour
 
 
     [Header("Bot Stat Ranges")]
-    public float BotBehaviorRange_IntellectPercent;
     public float BotBehaviorRange_AggressionPercent;
+    public float BotBehaviorRange_BraveryPercent;
+    public float BotBehaviorRange_IntellectPercent;
+    public float BotBehaviorRange_MobilityPercent;
+    public float BotBehaviorRange_IdleTimerMax;
+    public float BotBehaviorRange_IdleTimerMin;
     public float BotBehaviorMin_WakeUpTime;
     public float BotBehaviorMax_WakeUpTime;
 
     [Header("Multipliers")]
-
-    public float BotMultiplier_MultiplierDamage;
-    public float BotMultiplier_MultiplierSpeed;
-    public float BotMultiplier_MultiplierWeaponSpeed;
     public float BotMultiplierMin_Damage;
     public float BotMultiplierMax_Damage;
     public float BotMultiplierMin_Speed;
@@ -202,7 +219,8 @@ public class BotsManager : MonoBehaviour
         for (int i = 0; i < Crew.transform.childCount;i++) 
         { 
             Crew.transform.GetChild(i).gameObject.GetComponent<BotLogic>().SetManager(this); 
-            Crew.transform.GetChild(i).gameObject.GetComponent<BotLogic>().SetPlayer(ThePlayer); 
+            Crew.transform.GetChild(i).gameObject.GetComponent<BotLogic>().SetPlayer(ThePlayer);
+            GeneratePersonality(Crew.transform.GetChild(i).gameObject.GetComponent<BotLogic>());
         }
     }
 
@@ -213,14 +231,45 @@ public class BotsManager : MonoBehaviour
 
     void Update()
     {
-        GetPlayersCurrentZone();
+        UpdatePlayersCurrentZone();
         GetAllBotStats();
         UpdateAllBotBehavior();
     }
 
 
+////////////////////////////////////////////////////////////////////////
+// C R E W   I N I T I A L I Z E R   F U N C T I O N S
+////////////////////////////////////////////////////////////////////////
 
+    private void GeneratePersonality(BotLogic botLogic)
+    {
+        float aggro = BotGlobal_BehaviorAggressionPercent + UnityEngine.Random.Range(-BotBehaviorRange_AggressionPercent,BotBehaviorRange_AggressionPercent);
+        float bravery = BotGlobal_BehaviorBraveryPercent + UnityEngine.Random.Range(-BotBehaviorRange_BraveryPercent,BotBehaviorRange_BraveryPercent);
+        float smarts = BotGlobal_BehaviorIntellectPercent + UnityEngine.Random.Range(-BotBehaviorRange_IntellectPercent,BotBehaviorRange_IntellectPercent);
+        float jumpy = BotGlobal_BehaviorMobilityPercent + UnityEngine.Random.Range(-BotBehaviorRange_MobilityPercent,BotBehaviorRange_MobilityPercent);
+        float damage_mult = UnityEngine.Random.Range(BotMultiplierMin_Damage,BotMultiplierMax_Damage);
+        float move_speed_mult = UnityEngine.Random.Range(BotMultiplierMin_Speed,BotMultiplierMax_Speed);
+        float wepn_speed_mult = UnityEngine.Random.Range(BotMultiplierMin_WeaponSpeed,BotMultiplierMax_WeaponSpeed);
+        botLogic.SetPersonality(aggro, bravery, smarts, jumpy, damage_mult, move_speed_mult, wepn_speed_mult);
 
+    }
+
+////////////////////////////////////////////////////////////////////////
+// G A M E   M A N A G E R   G E T T E R   F U N C T I O N S
+////////////////////////////////////////////////////////////////////////
+    public int GetPlayersCurrentZone() { return PlayersCurrentZoneLevel; }
+
+    public List<GameObject> GetCrew()
+    {
+        List<GameObject> the_crew = new List<GameObject>();
+
+        for (int i = 0; i < Crew.transform.childCount; i++)
+        {
+            the_crew.Add(Crew.transform.GetChild(i).gameObject);
+        }
+
+        return the_crew;
+    }
 
 
 ////////////////////////////////////////////////////////////////////////
@@ -230,8 +279,45 @@ public class BotsManager : MonoBehaviour
     public int GetZoneCount() { return Zones.Count; }
     public BoxCollider2D GetZoneCollider(int zone_id) { return Zones[zone_id].GetComponent<BoxCollider2D>(); }
 
+    public List<GameObject> GetOceanLadders()
+    {
+        List<GameObject> ladders = new List<GameObject>();
+
+        for (int i = 0; i < Zones[0].transform.childCount; i++)
+        {
+            if (Zones[0].transform.GetChild(i).tag == "ShipTrigger_LadderOcean")
+            {
+                ladders.Add(Zones[0].transform.GetChild(i).gameObject);
+            }
+        }
+        return ladders;
+    }
+
+    public Vector2 GetNeededOceanLadder(float posX)
+    {
+        List<GameObject> ladders = new List<GameObject>();
+        int closest_ladder_id = 0;
+        float closest_distance = 999999999;
+        float distance;
+        for (int i = 0; i < Zones[0].transform.childCount; i++)
+        {
+            if (Zones[0].transform.GetChild(i).tag == "ShipTrigger_LadderOcean")
+            {
+                ladders.Add(Zones[0].transform.GetChild(i).gameObject);
+                distance = Math.Abs(ladders[ladders.Count-1].transform.position.y - posX);
+                if (distance < closest_distance)
+                {
+                    closest_ladder_id = ladders.Count-1;
+                    closest_distance = distance;
+                }
+            }
+        }
 
 
+
+
+        return ladders[closest_ladder_id].transform.position;
+    }
 
 
 
@@ -259,18 +345,13 @@ public class BotsManager : MonoBehaviour
 
 
 
-
-
-
-
-
-    public int GetLadderLevel(Transform ladder)
+    public int GetObjectLevel(Transform ladder, string cur_tag)
     {
         for (int y = 0; y < Zones.Count;y++)
         {
             for (int x = 0; x < Zones[y].transform.childCount;x++)
             {
-                if (Zones[y].transform.GetChild(x).tag == "ShipTrigger_Ladder" && Zones[y].transform.GetChild(x).transform.position == ladder.position)
+                if (Zones[y].transform.GetChild(x).tag == cur_tag && Zones[y].transform.GetChild(x).transform.position == ladder.position)
                 {
                     return y;
                 }
@@ -278,6 +359,9 @@ public class BotsManager : MonoBehaviour
         }
         return -1;
     }
+
+
+
 
     public float GetLadderHeight(Transform ladder)
     {
@@ -323,7 +407,45 @@ public class BotsManager : MonoBehaviour
     }
 
 
+    public GameObject GetAnOpenDefensivePart()
+    {
+        List<GameObject> defensibleObjects = new List<GameObject>();
 
+        for (int y = 0; y < Zones.Count;y++)
+        {
+            for (int x = 0; x < Zones[y].transform.childCount;x++)
+            {
+                if (IsTagDefensible(Zones[y].transform.GetChild(x).tag) && IsDefensiblePartFree(Zones[y].transform.GetChild(x)))
+                {
+                    defensibleObjects.Add(Zones[y].transform.GetChild(x).gameObject);
+                }
+            }
+        }
+
+        if (defensibleObjects.Count > 0) { return defensibleObjects[UnityEngine.Random.Range(0,defensibleObjects.Count)]; }
+        return null;
+    }
+
+
+
+    private bool IsTagDefensible(string cur_tag)
+    {
+        if (cur_tag == "ShipTrigger_Cannon") { return true; }
+        else if (cur_tag == "ShipTrigger_Treasure") { return true; }
+
+        return false;
+    }
+
+    private bool IsDefensiblePartFree(Transform cur_object)
+    {
+        DefensiveShipPartInfo info = cur_object.gameObject.GetComponent<DefensiveShipPartInfo>();
+        if (!info.IsUnityNull())
+        {
+            return info.GetIsNotBeingUsed();
+        }
+        
+        return false;
+    }
 
 
 
@@ -379,7 +501,16 @@ public class BotsManager : MonoBehaviour
             }
         }
     }
-    private void UpdateBotsDefense(List<Transform> awake_bots) {}
+    private void UpdateBotsDefense(List<Transform> awake_bots)
+    {
+        for (int i = 0; i < awake_bots.Count;i++)
+        {
+            if (awake_bots[i].gameObject.GetComponent<BotLogic>().GetBehavior() == 0)
+            { 
+                awake_bots[i].gameObject.GetComponent<BotLogic>().UpdateBehavior(2);
+            }
+        }
+    }
     private void UpdateBotsRetreat(List<Transform> awake_bots) {}
     private void UpdateBotsWakeUp(List<Transform> awake_bots) {}
 
@@ -391,13 +522,15 @@ public class BotsManager : MonoBehaviour
     ////////////////////////////////////////////////////////////////////////
 
 
-    public void GetPlayersCurrentZone()
+    public void UpdatePlayersCurrentZone()
     {
 
         
         int zone_count = GetZoneCount();
         int players_old_zone = PlayersCurrentZoneLevel;
         BoxCollider2D cur_zone;
+
+        PlayersCurrentZoneLevel = -1;
 
         for (int i = 0; i < zone_count;i++)
         {

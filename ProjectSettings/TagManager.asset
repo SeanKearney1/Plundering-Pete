@@ -16,6 +16,11 @@ TagManager:
   - ShipTrigger_StaircaseLeft
   - ShipTrigger_StaircaseRight
   - ShipTrigger_LadderOcean
+  - ShipTrigger_Cannon
+  - ShipTrigger
+  - Bot
+  - DavyJones
+  - ShipTrigger_LadderOceanBottom
   layers:
   - Default
   - TransparentFX
@@ -25,7 +30,7 @@ TagManager:
   - UI
   - Hull
   - Player_Bot
-  - 
+  - If_I_were_a_bad_demoman
   - 
   - 
   - 
@@ -53,8 +58,29 @@ TagManager:
   - name: Default
     uniqueID: 0
     locked: 0
+  - name: ParallaxBackground
+    uniqueID: 1363645613
+    locked: 0
+  - name: ShipBack
+    uniqueID: 820744513
+    locked: 0
+  - name: ShipObject
+    uniqueID: 1364687307
+    locked: 0
   - name: Player
+    uniqueID: 3020521887
+    locked: 0
+  - name: Smoke
+    uniqueID: 300162469
+    locked: 0
+  - name: ShipLighting
+    uniqueID: 1694276885
+    locked: 0
+  - name: ShipFront
     uniqueID: 823720923
+    locked: 0
+  - name: HealthBars
+    uniqueID: 183137787
     locked: 0
   m_RenderingLayers:
   - Default

@@ -6,15 +6,11 @@ public class UIButtons : MonoBehaviour
 
     public void Play()
     {
-        SceneManager.LoadScene("Level1_1");
-    }
-    public void Levels() 
-    {
-        SceneManager.LoadScene("LevelMenuScene");
+        SceneManager.LoadScene("LoadSaveFileScene");
     }
     public void Settings()
     {
-
+        SceneManager.LoadScene("SettingsScene");
     }
     public void MainMenu()
     {
