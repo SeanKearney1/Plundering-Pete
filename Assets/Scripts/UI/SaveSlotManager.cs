@@ -35,7 +35,7 @@ public class SaveSlotManager : MonoBehaviour
         davyjones.SetCurrentSaveFile(SaveFile.GetSaveSlot(save_slot));
 
 
-        SceneManager.LoadScene("Level1_1");
+        SceneManager.LoadScene("SaveSlotHomeMenu");
     }
 
     public void AskWipeSaveSlot(int save_slot)

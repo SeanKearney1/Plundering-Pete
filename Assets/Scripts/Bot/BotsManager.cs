@@ -205,6 +205,7 @@ public class BotsManager : MonoBehaviour
 
     private GameObject Navigation;
     private List<GameObject> Zones = new List<GameObject>();
+    private List<Transform> GrapplePoints = new List<Transform>();
     private GameObject Crew;
 
 
@@ -222,6 +223,33 @@ public class BotsManager : MonoBehaviour
             Crew.transform.GetChild(i).gameObject.GetComponent<BotLogic>().SetPlayer(ThePlayer);
             GeneratePersonality(Crew.transform.GetChild(i).gameObject.GetComponent<BotLogic>());
         }
+
+
+        // Behold the nest.
+        if (Navigation.transform.childCount > 0)
+        {
+            Transform cur_mast;
+            for (int i = 0; i < Navigation.transform.GetChild(0).childCount; i++)
+            {
+                cur_mast = Navigation.transform.GetChild(0).GetChild(i);
+                if (cur_mast.tag == "ShipTrigger_Mast") {
+                    for (int q = 0; q < cur_mast.childCount; q++)
+                    {
+                        for (int z = 0; z < cur_mast.GetChild(q).childCount; z++)
+                        {
+                            GrapplePoints.Add(cur_mast.GetChild(q).GetChild(z));
+                        }
+                    }
+                }
+            }
+            {
+                
+            }
+        }
+
+
+
+
     }
 
 
@@ -277,6 +305,33 @@ public class BotsManager : MonoBehaviour
 ////////////////////////////////////////////////////////////////////////
 
     public int GetZoneCount() { return Zones.Count; }
+
+    public List<Transform> GetGrapplePoints() { return GrapplePoints; }
+
+    public int GetCrewCount() { 
+        List<GameObject> ocean_ladders = GetOceanLadders();
+        Transform cur_bot;
+        int count = 0;
+        for (int i = 0; i < ocean_ladders.Count; i++)
+        {
+            for (int q = 0; q < ocean_ladders[i].transform.childCount; q++)
+            {
+                cur_bot = ocean_ladders[i].transform.GetChild(q);
+                if (cur_bot.tag == "Bot" && !cur_bot.GetComponent<HealthManager>().IsPlayerDead()) { count++; }
+            }
+        }
+
+        for (int i = 0; i < Crew.transform.childCount; i++)
+        {
+            cur_bot = Crew.transform.GetChild(i);
+            if (cur_bot.tag == "Bot" && !cur_bot.GetComponent<HealthManager>().IsPlayerDead()) { count++; }
+        }
+
+
+        return count;
+    }
+
+
     public BoxCollider2D GetZoneCollider(int zone_id) { return Zones[zone_id].GetComponent<BoxCollider2D>(); }
 
     public List<GameObject> GetOceanLadders()
@@ -450,6 +505,7 @@ public class BotsManager : MonoBehaviour
 
 
 
+
 ////////////////////////////////////////////////////////////////////////
 // M A N A G E R   U P D A T E   F U N C T I O N S
 ////////////////////////////////////////////////////////////////////////
@@ -538,11 +594,12 @@ public class BotsManager : MonoBehaviour
             if (ThePlayer.GetComponent<Rigidbody2D>().IsTouching(cur_zone))
             {
                 PlayersCurrentZoneLevel = i;
+                break;
             }
         }
 
         if (players_old_zone != PlayersCurrentZoneLevel) 
-        { 
+        {
             foreach (Transform bot in Crew.transform)
             {
                 bot.gameObject.GetComponent<BotLogic>().UpdatePlayerLevel(PlayersCurrentZoneLevel);

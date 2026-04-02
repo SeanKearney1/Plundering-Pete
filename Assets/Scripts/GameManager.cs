@@ -11,7 +11,8 @@ public class GameManager : MonoBehaviour
 
     private int PlayersCurrentShip;
     private int PlayersCurrentZone;
-    private GameObject PauseMenu;
+
+    private GameObject TheLevelUI;
     private GameObject ThePlayer;
     private GameObject[] TheFleet;
     private SessionManager sessionManager;
@@ -20,15 +21,19 @@ public class GameManager : MonoBehaviour
     private GameObject CutsceneBoat;
     private Animator animator;
     private Vector2 playerParentPos;
+    private bool DidPlayerWin;
     private bool InCutscene = true;
     private bool HasDoneCutscene = false;
     private bool DetachedFromLadder = false;
-
+    private bool GameIsOver = false;
+    private bool StartedGameOver = false;
+    private float GameStartTimeStamp;
+    private float GameEndTimeStamp;
     
 
     void Start()
     {
-        PauseMenu = GameObject.Find("PauseMenu");
+        TheLevelUI = GameObject.Find("Level Canvas");
         ThePlayer = GameObject.FindWithTag("Player");
         TheFleet = GameObject.FindGameObjectsWithTag("ShipTrigger");
         sessionManager = GameObject.FindWithTag("DavyJones").GetComponent<SessionManager>();
@@ -37,7 +42,7 @@ public class GameManager : MonoBehaviour
         ThePlayer.GetComponent<PlayerLogic>().SetPoseidon(gameObject);
         ThePlayer.GetComponent<MovementLogic>().SetPoseidon(gameObject);
 
-        PauseMenu.SetActive(false);
+        GameStartTimeStamp = Time.time;
 
         GameObject[] bots = GameObject.FindGameObjectsWithTag("Bot");
 
@@ -47,16 +52,22 @@ public class GameManager : MonoBehaviour
 
     void Update()
     {
-        if (!HasDoneCutscene) { BeginCutscene(); }
-        if (InCutscene) {
-            Cutscene();
-        }
-        else
-        {
-            GetPlayersCurrentShipAndZone();
-        }
+        if (!GameIsOver) { CheckForGameFinished(); }
 
-        if (Input.GetKeyDown(KeyCode.Escape)) { PauseLogic(); }
+        // If it is still not a game over continue as usual.
+        if (!GameIsOver) {
+            if (!HasDoneCutscene) { BeginCutscene(); }
+            if (InCutscene) {
+                Cutscene();
+            }
+            else
+            {
+                GetPlayersCurrentShipAndZone();
+            }
+
+            if (Input.GetKeyDown(KeyCode.Escape)) { TheLevelUI.GetComponent<LevelUI>().PauseLogic(); }
+        }
+        else { GameOver(); }
     }
 
 
@@ -125,6 +136,27 @@ public class GameManager : MonoBehaviour
         return everyone;
     }
 
+
+    public List<Transform> GetGrapplePoints(Vector3 player_pos)
+    {
+        List<Transform> grapple_points = new List<Transform>();
+        List<Transform> new_grapple_points;
+
+        for (int i = 0; i < TheFleet.Length; i++)
+        {
+            new_grapple_points = TheFleet[i].GetComponent<BotsManager>().GetGrapplePoints(); 
+
+            for (int q = 0; q < new_grapple_points.Count; q++)
+            {
+                if ((transform.position - new_grapple_points[q].position).magnitude <= GeneralGameInfo.Const_MaxGrappleDistance)
+                {
+                    grapple_points.Add(new_grapple_points[q]);
+                }
+            }
+        }
+        Debug.Log("Total Amount of Grapple Points in level is "+grapple_points.Count);
+        return grapple_points;
+    }
 
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -272,28 +304,47 @@ public class GameManager : MonoBehaviour
 
 
 
-
-    private void PauseLogic()
+    private bool PlayerHasWon()
     {
-        if (!PauseMenu.activeSelf) { PauseGame(); }
-        else { UnPauseGame(); }
+        bool is_all_bots_dead = true;
+        bool is_all_ships_sunk = true;
+        for (int i = 0; i < TheFleet.Length; i++)
+        {
+            if (TheFleet[i].GetComponent<BotsManager>().GetCrewCount() > 0) { is_all_bots_dead = false; }
+            if (!TheFleet[i].GetComponent<ShipLogic>().IsSunk()) { is_all_ships_sunk = false; }
+            if (!(is_all_bots_dead || is_all_ships_sunk)) { return false; }
+        }
+        return true;
     }
 
 
-    private void PauseGame()
+
+    private void CheckForGameFinished()
     {
-        PauseMenu.SetActive(true);
-        Time.timeScale = 0.0f;
-    }
-    private void UnPauseGame()
-    {
-        PauseMenu.SetActive(false);
-        Time.timeScale = 1.0f;
+        if (ThePlayer.GetComponent<HealthManager>().IsPlayerDead()) 
+        {
+            GameIsOver = true;
+            DidPlayerWin = false;
+        }
+        else if (PlayerHasWon())
+        {
+            GameIsOver = true;
+            DidPlayerWin = true;
+        }
     }
 
 
-    private void GameOver(bool DidPlayerWin)
+    private void GameOver()
     {
+        if (!StartedGameOver) { GameOverStart(); }
+    }
+
+    private void GameOverStart()
+    {
+        Debug.Log("GAME OVER START!!!!");
+        StartedGameOver = true;
+        TheLevelUI.GetComponent<LevelUI>().EnableGameOverUI(DidPlayerWin);
+
         
     }
 

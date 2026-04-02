@@ -1,3 +1,4 @@
+using System.Linq;
 using Unity.VisualScripting;
 using UnityEngine;
 
@@ -6,18 +7,26 @@ public class HealthManager : MonoBehaviour
 
     public float Health;
     private float Cur_Health;
+    private float DamageTakenRecently = 0.0f;
+    private float LastDamageTimeStamp = 0.0f;
+    private bool PlayerDead = false;
 
     private GameObject HealthBar;
+    private GameObject HealthBarBackground;
 
     void Start()
     {
         Cur_Health = Health;
         HealthBar = transform.Find("HealthBar").gameObject;
+        HealthBarBackground = transform.Find("HealthBarBackground").gameObject;
     }
 
     void Update()
     {
         HealthBar.GetComponent<SpriteMask>().alphaCutoff = 1 - (Cur_Health / Health);
+
+        if (LastDamageTimeStamp + GeneralGameInfo.Const_DamageStackTime < Time.time) { DamageTakenRecently = 0.0f; }
+
     }
 
 
@@ -28,7 +37,10 @@ public class HealthManager : MonoBehaviour
     public void TookDamage(int damageType, GameObject attacker)
     {
         float damage_multiplier = 1f;
-        BaseDamages baseDamages = new BaseDamages();
+        float damage;
+        int anim_damage_type;
+
+        LastDamageTimeStamp = Time.time;
 
         if (!attacker.GetComponent<BotLogic>().IsUnityNull()) { damage_multiplier = attacker.GetComponent<BotLogic>().GetDamageMultiplier(); }
 
@@ -36,25 +48,76 @@ public class HealthManager : MonoBehaviour
         if (damageType == 2) // Grenade
         {
             float distance = (transform.position-attacker.transform.position).magnitude;
-            float max_distance = baseDamages.MaxGrenadeDistance;
-            float damage = baseDamages.BaseDamage[damageType] * ( (max_distance-distance + baseDamages.MaxGrenadeDistance) / max_distance);
+            float max_distance = GeneralGameInfo.Const_MaxGrenadeDistance;
+            damage = GeneralGameInfo.Const_BaseDamage[damageType] * ( (max_distance-distance + GeneralGameInfo.Const_MaxGrenadeDistance) / max_distance);
 
-            if (damage > baseDamages.BaseDamage[damageType]) { damage = baseDamages.BaseDamage[damageType]; }
-
-            Cur_Health -= damage;
+            if (damage > GeneralGameInfo.Const_BaseDamage[damageType]) { damage = GeneralGameInfo.Const_BaseDamage[damageType]; }
         }
-        else { Cur_Health -= baseDamages.BaseDamage[damageType] * damage_multiplier; }
+        else 
+        {
+            Debug.Log("Calculated damage = "+GeneralGameInfo.Const_BaseDamage[damageType]+" * "+damage_multiplier);
+            damage = GeneralGameInfo.Const_BaseDamage[damageType] * damage_multiplier;
+        }
 
-        if (Cur_Health < 0) { Death(); }
+        Debug.Log(gameObject.name+" took "+damage+" damage!!!");
+
+        Cur_Health -= damage;
+        DamageTakenRecently += damage;
+
+
+        if (DamageTakenRecently < GeneralGameInfo.Const_MinDamageToKO) { anim_damage_type = GetDamageDirection(0, attacker); }
+        else { anim_damage_type = GetDamageDirection(2, attacker); }
+
+
+
+        if (Cur_Health <= 0) 
+        {
+            anim_damage_type = GetDamageDirection(4, attacker);
+            Death();
+        }
+
+        GetComponent<MovementLogic>().SetDamageState(anim_damage_type);
     }
+
+
+
 
 
     private void Death()
     {
-        if (!GetComponent<BotLogic>().IsUnityNull()) { GetComponent<BotLogic>().enabled = false; }
+        PlayerDead = true;
+        HealthBar.GetComponent<SpriteRenderer>().enabled = false;
+        HealthBarBackground.GetComponent<SpriteRenderer>().enabled = false;
+        if (!GetComponent<MovementLogic>().IsUnityNull()) { GetComponent<MovementLogic>().Death(); }
         if (!GetComponent<PlayerLogic>().IsUnityNull()) { GetComponent<PlayerLogic>().enabled = false; }
-        if (!GetComponent<MovementLogic>().IsUnityNull()) { GetComponent<MovementLogic>().enabled = false; }
+        if (!GetComponent<BotLogic>().IsUnityNull()) { GetComponent<BotLogic>().enabled = false; }
         if (!GetComponent<PlayerInput>().IsUnityNull()) { GetComponent<PlayerInput>().enabled = false; }
     }
+
+
+
+    public bool IsPlayerDead() { return PlayerDead; }
+
+
+
+
+
+
+    private int GetDamageDirection(int damage_type, GameObject attacker)
+    { 
+        Debug.Log("transform.eulerAngles.y = "+transform.eulerAngles.y+" "+transform.position.x+" > "+attacker.transform.position.x);
+        if (transform.eulerAngles.y == 180)
+        {
+            Debug.Log("Turned Around!");
+            if (transform.position.x < attacker.transform.position.x) { return damage_type + 1; }
+        }
+        else
+        {
+            if (transform.position.x > attacker.transform.position.x) { return damage_type + 1; }
+        }
+
+        return damage_type;
+    }
+
 
 }

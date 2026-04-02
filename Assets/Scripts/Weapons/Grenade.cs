@@ -66,16 +66,15 @@ public class Grenade : MonoBehaviour
     private void HurtVictims()
     {
         List<GameObject> victims = gameManager.GetEveryone();
-        BaseDamages baseDamages = new BaseDamages();
         float cur_distance;
 
         for (int i = 0; i < victims.Count; i++) {
 
             cur_distance = (victims[i].transform.position - transform.position).magnitude;
 
-            if (cur_distance <= baseDamages.MaxGrenadeDistance && !Physics2D.Linecast(transform.position, victims[i].transform.position, layerMask, 0, 0))
+            if (cur_distance <= GeneralGameInfo.Const_MaxGrenadeDistance && !Physics2D.Linecast(transform.position, victims[i].transform.position, layerMask, 0, 0))
             {
-                Debug.Log("victims["+i+"] = "+victims[i]);
+                //Debug.Log("victims["+i+"] = "+victims[i]);
                 victims[i].GetComponent<HealthManager>().TookDamage(2, gameObject);
             }
         }

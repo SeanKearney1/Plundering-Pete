@@ -21,6 +21,10 @@ TagManager:
   - Bot
   - DavyJones
   - ShipTrigger_LadderOceanBottom
+  - HitBox
+  - MeleeTrigger
+  - GrapplePoint
+  - ShipTrigger_Mast
   layers:
   - Default
   - TransparentFX
@@ -31,7 +35,7 @@ TagManager:
   - Hull
   - Player_Bot
   - If_I_were_a_bad_demoman
-  - 
+  - Melee
   - 
   - 
   - 

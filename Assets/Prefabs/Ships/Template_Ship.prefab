@@ -378,6 +378,7 @@ GameObject:
   m_Component:
   - component: {fileID: 7746794068385329530}
   - component: {fileID: 3827743626100844784}
+  - component: {fileID: -8630644417209710777}
   m_Layer: 0
   m_Name: Template_Ship
   m_TagString: Untagged
@@ -416,29 +417,40 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 042b5016f55967a4d921402417e0e725, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::BotsManager
+  BotGlobal_BehaviorAggressionPercent: 0
   BotGlobal_BehaviorBraveryPercent: 0
   BotGlobal_BehaviorIntellectPercent: 0
-  BotGlobal_MobilityPercent: 0
-  BotGlobal_MobilityBiasPercent: 0
+  BotGlobal_BehaviorMobilityPercent: 0
   BotGlobal_OffensePercent: 0.5
   BotGlobal_MinCountToRush: -1
   BotGlobal_MaxActive: 1
   BotGlobal_ReviewDefenseDelay: 0
-  BotGlobal_ComboFlags: 0
-  BotGlobal_ComboBias: 0
-  BotBehaviorRange_IntellectPercent: 0
   BotBehaviorRange_AggressionPercent: 0
+  BotBehaviorRange_BraveryPercent: 0
+  BotBehaviorRange_IntellectPercent: 0
+  BotBehaviorRange_MobilityPercent: 0
+  BotBehaviorRange_IdleTimerMax: 0
+  BotBehaviorRange_IdleTimerMin: 0
   BotBehaviorMin_WakeUpTime: 0
   BotBehaviorMax_WakeUpTime: 0
-  BotMultiplier_MultiplierDamage: 0
-  BotMultiplier_MultiplierSpeed: 0
-  BotMultiplier_MultiplierWeaponSpeed: 0
   BotMultiplierMin_Damage: 0
   BotMultiplierMax_Damage: 0
   BotMultiplierMin_Speed: 0
   BotMultiplierMax_Speed: 0
   BotMultiplierMin_WeaponSpeed: 0
   BotMultiplierMax_WeaponSpeed: 0
+--- !u!114 &-8630644417209710777
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6640435428569766951}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b5921bff1ddc40b4395600e44a558b9e, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ShipLogic
 --- !u!1 &7146811427815584327
 GameObject:
   m_ObjectHideFlags: 0

@@ -249,11 +249,8 @@ public class BotLogic : MonoBehaviour
 
     public void UpdatePlayerLevel(int new_zone)
     {
-        if (PlayersCurrentZoneLevel != new_zone)
-        {
-            RouteRecalculationNeeded = true;
-            PlayersCurrentZoneLevel = new_zone;
-        }
+        PlayersCurrentZoneLevel = new_zone;
+        if (BehaviorState == 1) { RouteRecalculationNeeded = true; }
     }
 
     // This is called whenever an action is completed like: 
@@ -287,6 +284,8 @@ public class BotLogic : MonoBehaviour
     {
         DesiredPosition = CalcDesiredPosition();
         
+        Debug.Log("Recalculating Route for behavior "+BehaviorState);
+
         List<Vector2> checkpoints = new List<Vector2>();
         List<EntityId> VisitedLadders = new List<EntityId>();
         Vector2 cur_pos = transform.position;
@@ -358,7 +357,7 @@ public class BotLogic : MonoBehaviour
     private List<Vector2> CalculatePath(Vector2 final_pos, Vector2 cur_pos, List<Vector2> checkpoints, List<EntityId> VisitedLadders, int level_destination, int cur_level)
     {
         List<Transform> ladders = TheBotsManager.GetZonesAvailableLadderPositions(cur_level);
-        LayerMask layerMask = LayerMask.GetMask("Hull");
+        LayerMask layerMask = GeneralGameInfo.Const_HullMask;
         Vector2 new_pos;
         Vector2 adjusted_ladder_pos;
         int new_level;
@@ -887,7 +886,7 @@ public class BotLogic : MonoBehaviour
 
     private void WalkTowardsObjective(Vector3 objective_pos)
     {
-        Debug.Log("ObjectivesCurrentZoneLevel = "+ObjectivesCurrentZoneLevel);
+        //Debug.Log("ObjectivesCurrentZoneLevel = "+ObjectivesCurrentZoneLevel);
         if (ObjectivesCurrentZoneLevel != -1) {
             if (transform.position.x < objective_pos.x) { Look.x = 1; }
             else { Look.x = -1; }
@@ -1020,6 +1019,7 @@ public class BotLogic : MonoBehaviour
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     private void debug__ShowPath(Vector2 cur_pos)
     {
+        Debug.Log("NEW PATH COUNT: "+DesiredPath.Count);
         if (DesiredPath.Count > 0) {
             Debug.DrawLine(cur_pos, DesiredPath[DesiredPath.Count-1], Color.deepPink, 10f);
             for (int i = DesiredPath.Count-2; i >= 0;i--)

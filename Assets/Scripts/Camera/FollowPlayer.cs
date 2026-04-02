@@ -43,14 +43,16 @@ public class FollowPlayer : MonoBehaviour
 
     void Update()
     {
-        Vector3 camera_pos;
+        if (Time.timeScale != 0) {
+            Vector3 camera_pos;
 
-        if (CutsceneOverride) { camera_pos = CutscenePos; }
-        else { camera_pos = ThePlayer.transform.position;}
-        
-        UpdateCameraPos(camera_pos);
-        UpdateCameraSize();
-        parallaxBackground.SetCameraSize(player_camera.orthographicSize/OGCameraSize);
+            if (CutsceneOverride) { camera_pos = CutscenePos; }
+            else { camera_pos = ThePlayer.transform.position;}
+            
+            UpdateCameraPos(camera_pos);
+            UpdateCameraSize();
+            parallaxBackground.SetCameraSize(player_camera.orthographicSize/OGCameraSize);
+        }
     }
 
 

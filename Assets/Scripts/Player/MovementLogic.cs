@@ -1,7 +1,6 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Runtime.Serialization.Formatters;
 using Unity.VisualScripting;
 using UnityEngine;
 
@@ -22,7 +21,9 @@ public class MovementLogic : MonoBehaviour
     private bool IsFalling;
     private bool IsWalking;
     private bool IsHurting = false;
+    private List<HealthManager> MeleeVictims = new List<HealthManager>();
     private int CauseOfDamage;
+    private float DamageCooldown = 0;
     private bool ComboDisableInputMovement = false;
     private bool can_jump = true;
     private Vector2 Look = new Vector2(0,0);
@@ -53,11 +54,16 @@ public class MovementLogic : MonoBehaviour
     private GameObject Poseidon;
     private GameObject healthBarMask;
     private GameObject healthBarBackground;
+    private MeleeLogic meleeLogic;
+    private GrappleBeamLogic GrappleBeam;
+
+    private Transform OGParent;
 
     public float moveSpeed;
     public float jumpHeight;
     public Sprite PistolSprite;
     public Sprite GrenadeSprite;
+    public Sprite GrappleSprite;
     public GameObject Bullet;
     public GameObject Grenade;
 
@@ -72,6 +78,8 @@ public class MovementLogic : MonoBehaviour
         hitBox = transform.Find("HitBox").GetComponent<CapsuleCollider2D>();
         playerCollision = transform.Find("CollisionBox").GetComponent<CapsuleCollider2D>();
         SecondaryWeapon = transform.Find("PlayerSprite/Torso1/Torso2/Torso3/ArmRight1/ArmRight2/HandRight/SecondaryWeaponSprite").GetComponent<SpriteRenderer>();
+
+
 
         // Saving the OG hitbox collider size
         hitboxColliderSize = hitBox.size;
@@ -139,15 +147,19 @@ public class MovementLogic : MonoBehaviour
             UpdateComboBeginTimeStamp();
         }
 
-        UpdateAnimator();
-
+        if ((comboIndex > 9000 && comboIndex < 9999) || DamageCooldown != 0) { animator.SetBool("IsInHurt",true); }
+        else { animator.SetBool("IsInHurt",false); }
 
         if (ValidateNextCombo()) { ComboStartLogic(); }
 
 
 
+        UpdateAnimator();
+
+
         if (comboIndex > 3000 && comboIndex < 4000) { SecondaryWeapon.sprite = PistolSprite; }
         else if (comboIndex > 4000 && comboIndex < 5000) { SecondaryWeapon.sprite = GrenadeSprite; }
+        else if (comboIndex > 5000 && comboIndex < 6000) { SecondaryWeapon.sprite = GrappleSprite; }
 
         Countdowns();
     }
@@ -172,23 +184,51 @@ public class MovementLogic : MonoBehaviour
     public void Set_IsDucking(bool var) { IsDucking = var; }
     public void Set_IsWalking(bool var) { IsWalking = var; }
     public void Set_IsTryingToJump(bool var) { IsTryingToJump = var; }
-
     public void Set_Look(Vector2 new_look) { Look = new_look; }
 
     public void SetComboDelay(float new_delay) { ComboDelay = new_delay; }
 
+    public void SetGrappleBeam(GrappleBeamLogic grappleBeamLogic) { GrappleBeam = grappleBeamLogic; }
+
+    public void SetMeleeScript(MeleeLogic new_melee_script) { meleeLogic = new_melee_script; }
 
     public void SetDamageState(int damage_type)
     {
+        Debug.Log("Took Damage!!!!!");
         CauseOfDamage = damage_type;
         IsHurting = true;
     }
+
 
 
     public float Get_ComboCooldown() { return ComboCooldown; }
     public float Get_ComboMovementCooldown() { return ComboMovementCooldown; }
 
     public bool Get_OnOceanLadder() { return OnOceanLadder; }
+
+
+    public bool LookingLeft()
+    {
+        if (transform.eulerAngles.y == 0) { return true; }
+        else { return false; }
+    }
+
+    public void Death()
+    {
+        Look = new Vector2(0,0);
+        rb.linearVelocityX = 0;
+    }
+
+
+
+
+
+
+
+
+
+
+
 
 
     private void UpdateAnimator()
@@ -213,18 +253,7 @@ public class MovementLogic : MonoBehaviour
         float moveX = Look.x;
         float moveY = rb.linearVelocity.y;
 
-
-        // Duck Logic.
-        if (IsDucking) { 
-            hitBox.size = new Vector2(hitboxColliderSize.x,hitboxColliderSize.x);
-            hitBox.transform.localPosition = new Vector3(0.0f,-0.475f,0.0f);
-            moveX = 0;
-        }
-        else { 
-            hitBox.size = hitboxColliderSize;
-            hitBox.transform.localPosition = new Vector3(0.0f,0.15f,0.0f); 
-        }
-
+        if (Duck(false, false)) { moveX = 0; }
 
         flipSprite(Look.x);
         rb.linearVelocity = new Vector2(moveX*moveSpeed,moveY);
@@ -249,6 +278,21 @@ public class MovementLogic : MonoBehaviour
         }
     }
 
+
+
+
+    private bool Duck(bool ForceDuck, bool DuckState)
+    {
+
+        if ((!ForceDuck && IsDucking) || (ForceDuck && DuckState)) { 
+            hitBox.size = new Vector2(hitboxColliderSize.x,hitboxColliderSize.x);
+            hitBox.transform.localPosition = new Vector3(0.0f,-0.475f,0.0f);
+            return true;
+        }
+        hitBox.size = hitboxColliderSize;
+        hitBox.transform.localPosition = new Vector3(0.0f,0.15f,0.0f); 
+        return false;
+    }
 
 
 
@@ -348,22 +392,25 @@ public class MovementLogic : MonoBehaviour
 
     private void Countdowns()
     {
-        if (ComboCooldown > 0) { ComboCooldown -= Time.deltaTime; }
-        if (ComboMovementCooldown > 0) { ComboMovementCooldown -= Time.deltaTime; }
+        ComboCooldown = CountdownLogic(ComboCooldown);
+        ComboMovementCooldown = CountdownLogic(ComboMovementCooldown);
+        DamageCooldown = CountdownLogic(DamageCooldown);
 
         if (ComboCooldown == 0) { comboIndex = 0; }
-
-        if (ComboCooldown < 0) { ComboCooldown = 0; }
-        if (ComboMovementCooldown < 0) { ComboMovementCooldown = 0; }
-
-
         if (ComboMovementCooldown == 0) { ComboDisableInputMovement = false; }
+    }
+
+    private float CountdownLogic(float timer)
+    {
+        if (timer > 0) { timer -= Time.deltaTime; }
+        if (timer < 0) { timer = 0;}
+        return timer;
     }
 
 
     private bool ValidateNextCombo()
     {
-        if (IsHurting) { return true; }
+        if (IsHurting && !(comboIndex > 9000 && comboIndex < 9999)) { return true; }
         if (ComboBeginTimeStamp + ComboDelay > Time.time) { return false; }
         if (ComboCooldown != 0) { return false; }
 
@@ -407,12 +454,15 @@ public class MovementLogic : MonoBehaviour
 
     private void ComboStartLogic()
     {
+
         if (IsHurting) { ComboStartDamaged(); }
-        else if (!(IsUsingCutlass || IsUsingPistol || IsUsingGrenade || IsUsingGrapple) && (IsDucking || IsJumping || IsFalling || IsWalking)) { ComboStartMovement(); }
         else if (IsUsingCutlass) { ComboStartCutlass(); }
         else if (IsUsingPistol)  { ComboStartPistol();  }
         else if (IsUsingGrenade) { ComboStartGrenade(); }
         else if (IsUsingGrapple) { ComboStartGrapple(); }
+        else if (IsDucking || IsJumping || IsFalling || IsWalking) { ComboStartMovement(); }
+
+        if (!GrappleBeam.IsUnityNull()) { GrappleBeamSwitch(); }
     }
 
 
@@ -424,6 +474,7 @@ public class MovementLogic : MonoBehaviour
             ComboCooldown = 1.25f;
             ComboMovementCooldown = 1.05f;
             ComboDisableInputMovement = true;
+            Duck(true, true);
             Debug.Log("Somersault");
         }
         else if (IsJumping && IsWalking) // IsUsingMovmentCombo &&
@@ -432,6 +483,7 @@ public class MovementLogic : MonoBehaviour
             ComboCooldown = 1.35f;
             ComboMovementCooldown = 1.15f;
             ComboDisableInputMovement = true;
+            Duck(true, true);
             Debug.Log("Jump flip"); 
         }
         else if (IsJumping && !IsDucking && CurCollidedLadder.IsUnityNull())
@@ -463,7 +515,6 @@ public class MovementLogic : MonoBehaviour
             ComboCooldown = 1.15f;
             ComboMovementCooldown = 1.15f;
             ComboDisableInputMovement = true;
-            AttackCutlass();
             Debug.Log("Big Slash"); 
         }
         else if (IsWalking && !IsJumping) 
@@ -471,7 +522,6 @@ public class MovementLogic : MonoBehaviour
             comboIndex = 2002;
             ComboCooldown = 1f;
             ComboMovementCooldown = 0f;
-            AttackCutlass();
             Debug.Log("Slash");
         }
         else if ((IsJumping || IsFalling) && !IsWalking && !IsDucking) 
@@ -480,7 +530,6 @@ public class MovementLogic : MonoBehaviour
             ComboCooldown = 0.85f; 
             ComboMovementCooldown = 0.85f;
             ComboDisableInputMovement = true;
-            AttackCutlass();
             Debug.Log("Uppercut"); 
         }
         else if (IsDucking && !IsWalking && CurCollidedLadder.IsUnityNull()) 
@@ -489,7 +538,6 @@ public class MovementLogic : MonoBehaviour
             ComboCooldown = 0.75f; 
             ComboMovementCooldown = 0.75f;
             ComboDisableInputMovement = true;
-            AttackCutlass();
             Debug.Log("Block"); 
         }
         else if (IsJumping && IsWalking) 
@@ -498,7 +546,6 @@ public class MovementLogic : MonoBehaviour
             ComboCooldown = 1.6f; 
             ComboMovementCooldown = 1.6f;
             ComboDisableInputMovement = true;
-            AttackCutlass();
             Debug.Log("Throw"); 
         }
     }
@@ -537,7 +584,24 @@ public class MovementLogic : MonoBehaviour
 
     private void ComboStartGrapple()
     {
-        comboIndex = 5000;
+        if (!IsDucking && !IsWalking && !IsJumping) // Grapple Idle
+        {
+            comboIndex = 5001;
+        }
+        else if (!IsDucking && IsWalking && !IsJumping) // Grapple Walk
+        {
+            comboIndex = 5002;
+        }
+        else if (IsDucking)  // Grapple Crouch
+        {
+            comboIndex = 5003;
+        }
+        else if (IsJumping)  // Grapple Jump
+        {
+            comboIndex = 5004;
+        }
+        //else if () //Grapple
+        //{ }
     }
 
 
@@ -545,38 +609,75 @@ public class MovementLogic : MonoBehaviour
     private void ComboStartDamaged()
     {
         // Stumble
-        if (CauseOfDamage == 0) // Stumble Forward
+        if (CauseOfDamage == 0) // Stumble Damage From Back
         {
             comboIndex = 9001;
+            ComboCooldown = 0.5f; 
+            ComboMovementCooldown = 0.5f;
+            ComboDisableInputMovement = true;
         }
-        else if (CauseOfDamage == 1) // Stumble Backward
+        else if (CauseOfDamage == 1) // Stumble Damage From Front
         {
             comboIndex = 9002;
+            ComboCooldown = 0.5f; 
+            ComboMovementCooldown = 0.5f;
+            ComboDisableInputMovement = true;
         }
 
 
         // Fall
-        else if (CauseOfDamage == 2) // Fall Forward
+        else if (CauseOfDamage == 2) // Fall Damage From Back
         {
             comboIndex = 9003;
+            ComboCooldown = 2f; 
+            ComboMovementCooldown = 2.25f;
+            ComboDisableInputMovement = true;
         }
-        else if (CauseOfDamage == 3) // Fall Backward
+        else if (CauseOfDamage == 3) // Fall Damage From Front
         {
             comboIndex = 9004;
+            ComboCooldown = 2f; 
+            ComboMovementCooldown = 2.25f;
+            ComboDisableInputMovement = true;
         }
 
         // Die
-        else if (CauseOfDamage == 4) // Die From Front
+        else if (CauseOfDamage == 4) // Die Damage From Back
         {
             comboIndex = 9005;
+            ComboCooldown =1f; 
+            ComboMovementCooldown = 1f;
+            ComboDisableInputMovement = true;
         }
-        else if (CauseOfDamage == 5) // Die From Back
+        else if (CauseOfDamage == 5) // Die Damage From Front
         {
             comboIndex = 9006;
+            ComboCooldown = 1f; 
+            ComboMovementCooldown = 1f;
+            ComboDisableInputMovement = true;
         }
-
+        DamageCooldown = ComboCooldown + GeneralGameInfo.Const_DamageCooldown;
+        CauseOfDamage = -1;
         IsHurting = false;
+        DisableMelee();
+    }
 
+
+
+
+
+    private void GrappleBeamSwitch()
+    {
+        if (comboIndex > 5000 && comboIndex <= 5004)
+        {
+            GrappleBeam.gameObject.GetComponent<SpriteRenderer>().enabled = true;
+            GrappleBeam.gameObject.GetComponent<GrappleBeamLogic>().enabled = true;
+        }
+        else
+        {
+            GrappleBeam.gameObject.GetComponent<SpriteRenderer>().enabled = false;
+            GrappleBeam.gameObject.GetComponent<GrappleBeamLogic>().enabled = false;
+        }
     }
 
 
@@ -606,10 +707,30 @@ public class MovementLogic : MonoBehaviour
 // W E A P O N   L O G I C
 ////////////////////////////////////////////////////////////////////////
 
-    public void AttackCutlass()
+
+
+    public void AddMeleeVictim(HealthManager new_victim)
     {
-        
+        MeleeVictims.Add(new_victim);
     }
+
+    public void EnableMelee()
+    {
+        meleeLogic.IsMeleeActive(true);
+    }
+    public void DisableMelee()
+    {
+        AttackMelee();
+        meleeLogic.IsMeleeActive(false);
+        MeleeVictims = new List<HealthManager>();
+    }
+
+    private void AttackMelee()
+    {
+        for (int i = 0; i < MeleeVictims.Count; i++) { MeleeVictims[i].TookDamage(0,gameObject); }
+    }
+
+
 
     public void AttackPistol()
     {
@@ -623,9 +744,15 @@ public class MovementLogic : MonoBehaviour
         new_bullet = Instantiate(Bullet, bullet_pos, Quaternion.identity);
         new_bullet.GetComponent<Gunshot>().Direction = direction;
         new_bullet.GetComponent<Gunshot>().SetGameManager(Poseidon.GetComponent<GameManager>());
+        new_bullet.GetComponent<Gunshot>().SetOwner(gameObject);
         if (direction.x > 0) { new_bullet.GetComponent<SpriteRenderer>().flipX = true; }
         new_bullet.SetActive(true);
     }
+
+
+
+
+
 
     public void AttackGrenade()
     {
@@ -646,6 +773,7 @@ public class MovementLogic : MonoBehaviour
     {
         
     }
+
 
 
 
@@ -688,6 +816,7 @@ public class MovementLogic : MonoBehaviour
             animator.SetInteger("ComboIdx",-69420);
             rb.gravityScale = 0f;
             rb.linearVelocity = new Vector2(0,0);
+            OGParent = transform.parent;
             transform.parent = CurOceanLadder.transform;
             transform.localPosition = new Vector3(OceanLadderCheckoints[0].x,OceanLadderCheckoints[0].y,transform.localPosition.z);
             InitialedOceanLadderProcess = false;
@@ -699,10 +828,10 @@ public class MovementLogic : MonoBehaviour
 
 
             Vector2 direction = (OceanLadderCheckoints[0] - new Vector2(transform.localPosition.x, transform.localPosition.y)).normalized;
-            transform.localPosition += new Vector3(direction.x,direction.y,transform.localPosition.z) * OceanLadderMovementSpeed * Time.deltaTime;
+            transform.localPosition += new Vector3(direction.x,direction.y,transform.localPosition.z) * OceanLadderMovementSpeed/2 * Time.deltaTime;
+            rb.linearVelocity = direction * OceanLadderMovementSpeed/2;
 
-
-            if (Math.Abs(transform.localPosition.y - OceanLadderCheckoints[0].y) < 0.01) 
+            if (Math.Abs(transform.localPosition.y - OceanLadderCheckoints[0].y) < 0.1) 
             {
                 OceanLadderCheckoints.RemoveAt(0);
             }
@@ -710,7 +839,7 @@ public class MovementLogic : MonoBehaviour
         else
         {
             rb.gravityScale = 1f;
-            transform.parent = null;
+            transform.parent = OGParent;
             OnOceanLadder = false;
             InitialedOceanLadderProcess = true;
             playerCollision.enabled = true;

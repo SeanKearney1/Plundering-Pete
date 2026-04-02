@@ -1,4 +1,5 @@
 using System;
+using Unity.VisualScripting;
 using UnityEngine;
 
 public class Gunshot : MonoBehaviour
@@ -8,9 +9,9 @@ public class Gunshot : MonoBehaviour
     public float FlashDuration;
     private float BeginTimeStamp;
     private GameManager gameManager;
+    private GameObject Owner;
 
     private SpriteRenderer spriteRenderer;
-    LayerMask layerMask;
 
     // Start is called once before the first execution of Update after the MonoBehaviour is created
     void Start()
@@ -26,11 +27,11 @@ public class Gunshot : MonoBehaviour
         new_smoke = Instantiate(Smoke, transform.position, Quaternion.identity);
         new_smoke.GetComponent<SmokeEffect>().Direction = Direction;
         new_smoke.SetActive(true);
-
         FireBullet();
     }
 
     public void SetGameManager( GameManager new_gamemanager) { gameManager = new_gamemanager; }
+    public void SetOwner( GameObject new_owner) { Owner = new_owner; }
 
     // Update is called once per frame
     void Update()
@@ -53,8 +54,45 @@ public class Gunshot : MonoBehaviour
 
 
 
-    private void FireBullet()
+        private void FireBullet()
     {
-        Physics.Raycast(transform.position, transform.TransformDirection(Vector3.forward));
+        ContactFilter2D contactFilter = new ContactFilter2D();
+        RaycastHit2D[] results = new RaycastHit2D[2];
+
+        contactFilter.useTriggers = true;
+        contactFilter.useLayerMask = true;
+        contactFilter.layerMask = GeneralGameInfo.Const_PistolMask;
+
+        Physics2D.Linecast(GetStartBulletPos(transform.position), GetEndBulletPos(transform.position), contactFilter, results); 
+
+
+        
+        Debug.DrawLine(GetStartBulletPos(transform.position), GetEndBulletPos(transform.position), Color.darkOrchid, 100f);
+
+        for (int i = 0; i < results.Length; i++) {
+            if (!results[i].collider.IsUnityNull() && results[i].collider.gameObject.tag == "HitBox")
+            {
+
+                Debug.Log("target.name = "+results[i].collider.name);
+                if (results[i].collider.transform.parent.GetComponent<HealthManager>()) 
+                {
+                    results[i].collider.transform.parent.GetComponent<HealthManager>().TookDamage(1,Owner);
+                }            
+            }
+        }
+    }
+
+    private Vector2 GetStartBulletPos(Vector2 start_pos)
+    {
+        if (Direction.x > 0) { start_pos.x -= GeneralGameInfo.Const_BulletOffset; }
+        else { start_pos.x += GeneralGameInfo.Const_BulletOffset; }
+        return start_pos;
+    }
+
+    private Vector2 GetEndBulletPos(Vector2 start_pos)
+    {
+        if (Direction.x > 0) { start_pos.x += GeneralGameInfo.Const_BulletDistance; }
+        else { start_pos.x -= GeneralGameInfo.Const_BulletDistance; }
+        return start_pos;
     }
 }
