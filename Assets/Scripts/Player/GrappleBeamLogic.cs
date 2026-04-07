@@ -13,7 +13,7 @@ public class GrappleBeamLogic : MonoBehaviour
         spriteRenderer = GetComponent<SpriteRenderer>();
         the_renderer = GetComponent<Renderer>();
         movementLogic = transform.parent.GetComponent<MovementLogic>();
-        movementLogic.SetGrappleBeam(this);
+        spriteRenderer.enabled = false;
     }
 
 

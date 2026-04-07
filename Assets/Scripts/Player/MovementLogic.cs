@@ -15,6 +15,9 @@ public class MovementLogic : MonoBehaviour
     private bool IsUsingPistol;
     private bool IsUsingGrenade;
     private bool IsUsingGrapple;
+    private bool WasUsingGrapple = false;
+    private bool IsCurrentlyGrappling = false;
+    private Vector2 GrapplePoint;
     private bool IsDucking;
     private bool IsJumping;
     private bool IsTryingToJump;
@@ -55,7 +58,7 @@ public class MovementLogic : MonoBehaviour
     private GameObject healthBarMask;
     private GameObject healthBarBackground;
     private MeleeLogic meleeLogic;
-    private GrappleBeamLogic GrappleBeam;
+    private GrappleBeamLogic grappleBeamLogic;
 
     private Transform OGParent;
 
@@ -80,6 +83,11 @@ public class MovementLogic : MonoBehaviour
         SecondaryWeapon = transform.Find("PlayerSprite/Torso1/Torso2/Torso3/ArmRight1/ArmRight2/HandRight/SecondaryWeaponSprite").GetComponent<SpriteRenderer>();
 
 
+        if (transform.Find("GrappleBeam"))
+        {
+            grappleBeamLogic = transform.Find("GrappleBeam").GetComponent<GrappleBeamLogic>();
+        }
+
 
         // Saving the OG hitbox collider size
         hitboxColliderSize = hitBox.size;
@@ -91,14 +99,15 @@ public class MovementLogic : MonoBehaviour
     void Update()
     {
         if (ScriptEnabled) {
-            if (!OnOceanLadder) { NormalMovementLogic(); }
-            else { OceanLadderLogic(); }
+            if (!(OnOceanLadder || IsCurrentlyGrappling)) { NormalMovementLogic(); }
+            else if (OnOceanLadder) { OceanLadderLogic(); }
+            else if (IsCurrentlyGrappling) { GrappleMovement(); }
         }
     }
 
     void FixedUpdate()
     { 
-        if (ScriptEnabled && !(ComboDisableInputMovement || OnOceanLadder))
+        if (ScriptEnabled && !(ComboDisableInputMovement || OnOceanLadder || IsCurrentlyGrappling))
         {
             if (LadderBeingUsed.IsUnityNull()) {
                 MoveLogic();
@@ -142,7 +151,7 @@ public class MovementLogic : MonoBehaviour
         
 
 
-        if (!(IsUsingCutlass || IsUsingPistol || IsUsingGrenade || IsUsingGrapple || IsWalking || IsJumping || IsFalling || IsDucking))
+        if (!(IsUsingCutlass || IsUsingPistol || IsUsingGrenade || IsUsingGrapple || WasUsingGrapple || IsWalking || IsJumping || IsFalling || IsDucking))
         {
             UpdateComboBeginTimeStamp();
         }
@@ -152,7 +161,7 @@ public class MovementLogic : MonoBehaviour
 
         if (ValidateNextCombo()) { ComboStartLogic(); }
 
-
+        GrappleBeamLogic();
 
         UpdateAnimator();
 
@@ -187,8 +196,6 @@ public class MovementLogic : MonoBehaviour
     public void Set_Look(Vector2 new_look) { Look = new_look; }
 
     public void SetComboDelay(float new_delay) { ComboDelay = new_delay; }
-
-    public void SetGrappleBeam(GrappleBeamLogic grappleBeamLogic) { GrappleBeam = grappleBeamLogic; }
 
     public void SetMeleeScript(MeleeLogic new_melee_script) { meleeLogic = new_melee_script; }
 
@@ -459,10 +466,8 @@ public class MovementLogic : MonoBehaviour
         else if (IsUsingCutlass) { ComboStartCutlass(); }
         else if (IsUsingPistol)  { ComboStartPistol();  }
         else if (IsUsingGrenade) { ComboStartGrenade(); }
-        else if (IsUsingGrapple) { ComboStartGrapple(); }
+        else if (IsUsingGrapple || WasUsingGrapple) { ComboStartGrapple(); }
         else if (IsDucking || IsJumping || IsFalling || IsWalking) { ComboStartMovement(); }
-
-        if (!GrappleBeam.IsUnityNull()) { GrappleBeamSwitch(); }
     }
 
 
@@ -512,8 +517,10 @@ public class MovementLogic : MonoBehaviour
         if (!IsWalking && !(IsFalling || IsJumping) && !IsDucking) 
         { 
             comboIndex = 2001;
-            ComboCooldown = 1.15f;
-            ComboMovementCooldown = 1.15f;
+            ComboCooldown = 1f;
+            ComboMovementCooldown = 1f;
+            //ComboCooldown = 1.15f;
+            //ComboMovementCooldown = 1.15f;
             ComboDisableInputMovement = true;
             Debug.Log("Big Slash"); 
         }
@@ -584,24 +591,36 @@ public class MovementLogic : MonoBehaviour
 
     private void ComboStartGrapple()
     {
-        if (!IsDucking && !IsWalking && !IsJumping) // Grapple Idle
-        {
-            comboIndex = 5001;
+
+        if (IsUsingGrapple) {
+            if (!IsDucking && !IsWalking && !IsJumping) // Grapple Idle
+            {
+                comboIndex = 5001;
+            }
+            else if (!IsDucking && IsWalking && !IsJumping) // Grapple Walk
+            {
+                comboIndex = 5002;
+            }
+            else if (IsDucking)  // Grapple Crouch
+            {
+                comboIndex = 5003;
+            }
+            else if (IsJumping)  // Grapple Jump
+            {
+                comboIndex = 5004;
+            }
         }
-        else if (!IsDucking && IsWalking && !IsJumping) // Grapple Walk
+        else //Grapple
         {
-            comboIndex = 5002;
+            rb.gravityScale = 0f;
+            IsCurrentlyGrappling = true;
+            animator.animatePhysics = false;
+            rb.bodyType = RigidbodyType2D.Kinematic;
         }
-        else if (IsDucking)  // Grapple Crouch
-        {
-            comboIndex = 5003;
-        }
-        else if (IsJumping)  // Grapple Jump
-        {
-            comboIndex = 5004;
-        }
-        //else if () //Grapple
-        //{ }
+
+        if (IsUsingGrapple) { WasUsingGrapple = true; }
+        else { WasUsingGrapple = false; }
+
     }
 
 
@@ -664,22 +683,79 @@ public class MovementLogic : MonoBehaviour
 
 
 
+////////////////////////////////////////////////////////////////////////////////////////////
+//  G R A P P L E   F U N C T I O N S
+////////////////////////////////////////////////////////////////////////////////////////////
+
+
+
+    private void GrappleBeamLogic()
+    {
+        List<Transform> grapple_points = Poseidon.GetComponent<GameManager>().GetGrapplePoints(transform.position);
+
+
+        int cur_index = -1;
+        float min_distance = 99999;
+
+        for (int i = 0; i < grapple_points.Count; i++)
+        {
+            if ((transform.position - grapple_points[i].position).magnitude < min_distance)
+            {
+                min_distance = (transform.position - grapple_points[i].position).magnitude;
+                cur_index = i;
+            }
+        }
+        if (cur_index > -1) { GrapplePoint = grapple_points[cur_index].position; }
+        else { GrapplePoint = new Vector2(); }
+
+
+        if (cur_index < grapple_points.Count && !grappleBeamLogic.IsUnityNull())
+        {
+            grappleBeamLogic.SetEndPoint(GrapplePoint);
+        }
+
+        if (!grappleBeamLogic.IsUnityNull()) { GrappleBeamSwitch(); }
+    }
+
+
+
+
+
 
 
     private void GrappleBeamSwitch()
     {
         if (comboIndex > 5000 && comboIndex <= 5004)
         {
-            GrappleBeam.gameObject.GetComponent<SpriteRenderer>().enabled = true;
-            GrappleBeam.gameObject.GetComponent<GrappleBeamLogic>().enabled = true;
+            grappleBeamLogic.gameObject.GetComponent<SpriteRenderer>().enabled = true;
+            grappleBeamLogic.gameObject.GetComponent<GrappleBeamLogic>().enabled = true;
         }
         else
         {
-            GrappleBeam.gameObject.GetComponent<SpriteRenderer>().enabled = false;
-            GrappleBeam.gameObject.GetComponent<GrappleBeamLogic>().enabled = false;
+            grappleBeamLogic.gameObject.GetComponent<SpriteRenderer>().enabled = false;
+            grappleBeamLogic.gameObject.GetComponent<GrappleBeamLogic>().enabled = false;
         }
     }
 
+
+
+    private void GrappleMovement()
+    {
+        Vector2 grapple_direction = (GrapplePoint - new Vector2(transform.position.x,transform.position.y)).normalized;
+
+        if ((GrapplePoint - new Vector2(transform.position.x,transform.position.y) ).magnitude <= GeneralGameInfo.Const_MinDistanceToGrapplePoint)
+        {
+            rb.gravityScale = 1f;
+            IsCurrentlyGrappling = false;
+            animator.animatePhysics = false;
+            rb.linearVelocityY += jumpHeight;
+            rb.bodyType = RigidbodyType2D.Dynamic;
+        }
+        else
+        {
+            rb.linearVelocity = grapple_direction * GeneralGameInfo.Const_GrappleSpeed;
+        }
+    }
 
 
 

@@ -1028,6 +1028,7 @@ MonoBehaviour:
   jumpHeight: 0
   PistolSprite: {fileID: 0}
   GrenadeSprite: {fileID: 0}
+  GrappleSprite: {fileID: 0}
   Bullet: {fileID: 0}
   Grenade: {fileID: 0}
 --- !u!95 &2552064716466250916
@@ -1040,7 +1041,7 @@ Animator:
   m_GameObject: {fileID: 2991397423479210333}
   m_Enabled: 1
   m_Avatar: {fileID: 0}
-  m_Controller: {fileID: 9100000, guid: c5e1957f315bcca4c95de9dbbc0cfae6, type: 2}
+  m_Controller: {fileID: 9100000, guid: 23fcf52262b541245bd6699ad271b77f, type: 2}
   m_CullingMode: 0
   m_UpdateMode: 0
   m_ApplyRootMotion: 1
