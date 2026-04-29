@@ -22,9 +22,21 @@ public class MeleeLogic : MonoBehaviour
 
     private void OnTriggerEnter2D(Collider2D collision)
     {
-        if (collision.gameObject.CompareTag("HitBox") && MeleeActive)
+        if (ValidateVictim(collision))
         {
             movementLogic.AddMeleeVictim(collision.transform.parent.gameObject.GetComponent<HealthManager>());
         }
+    }
+
+
+
+
+
+    private bool ValidateVictim(Collider2D collision)
+    {
+        if (!(collision.gameObject.CompareTag("HitBox") && MeleeActive)) { return false; }
+        if (collision.transform.parent.gameObject.GetComponent<BotLogic>() && movementLogic.gameObject.GetComponent<BotLogic>()) { return false; }
+        if (!collision.transform.parent.gameObject.GetComponent<BotLogic>() && !movementLogic.gameObject.GetComponent<BotLogic>()) { return false; }
+        return true;
     }
 }

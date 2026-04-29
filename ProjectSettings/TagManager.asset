@@ -25,6 +25,7 @@ TagManager:
   - MeleeTrigger
   - GrapplePoint
   - ShipTrigger_Mast
+  - ShipTrigger_Chest
   layers:
   - Default
   - TransparentFX

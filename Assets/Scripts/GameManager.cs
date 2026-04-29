@@ -148,13 +148,13 @@ public class GameManager : MonoBehaviour
 
             for (int q = 0; q < new_grapple_points.Count; q++)
             {
-                if ((transform.position - new_grapple_points[q].position).magnitude <= GeneralGameInfo.Const_MaxGrappleDistance)
+                if ((player_pos - new_grapple_points[q].position).magnitude <= GeneralGameInfo.Const_MaxGrappleDistance)
                 {
                     grapple_points.Add(new_grapple_points[q]);
                 }
             }
         }
-        Debug.Log("Total Amount of Grapple Points in level is "+grapple_points.Count);
+        //Debug.Log("Total Amount of Grapple Points in level is "+grapple_points.Count);
         return grapple_points;
     }
 

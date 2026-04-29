@@ -13,12 +13,14 @@ public class HealthManager : MonoBehaviour
 
     private GameObject HealthBar;
     private GameObject HealthBarBackground;
+    private MovementLogic movementLogic;
 
     void Start()
     {
         Cur_Health = Health;
         HealthBar = transform.Find("HealthBar").gameObject;
         HealthBarBackground = transform.Find("HealthBarBackground").gameObject;
+        movementLogic = GetComponent<MovementLogic>();
     }
 
     void Update()
@@ -55,17 +57,16 @@ public class HealthManager : MonoBehaviour
         }
         else 
         {
-            Debug.Log("Calculated damage = "+GeneralGameInfo.Const_BaseDamage[damageType]+" * "+damage_multiplier);
-            damage = GeneralGameInfo.Const_BaseDamage[damageType] * damage_multiplier;
+            if (IsBlocking(attacker)) { damage = 0; }
+            else { damage = GeneralGameInfo.Const_BaseDamage[damageType] * damage_multiplier; }
         }
 
-        Debug.Log(gameObject.name+" took "+damage+" damage!!!");
 
         Cur_Health -= damage;
         DamageTakenRecently += damage;
 
-
-        if (DamageTakenRecently < GeneralGameInfo.Const_MinDamageToKO) { anim_damage_type = GetDamageDirection(0, attacker); }
+        if (damage == 0) { anim_damage_type = -100; }
+        else if (DamageTakenRecently < GeneralGameInfo.Const_MinDamageToKO) { anim_damage_type = GetDamageDirection(0, attacker); }
         else { anim_damage_type = GetDamageDirection(2, attacker); }
 
 
@@ -76,7 +77,7 @@ public class HealthManager : MonoBehaviour
             Death();
         }
 
-        GetComponent<MovementLogic>().SetDamageState(anim_damage_type);
+        movementLogic.SetDamageState(anim_damage_type);
     }
 
 
@@ -88,12 +89,22 @@ public class HealthManager : MonoBehaviour
         PlayerDead = true;
         HealthBar.GetComponent<SpriteRenderer>().enabled = false;
         HealthBarBackground.GetComponent<SpriteRenderer>().enabled = false;
-        if (!GetComponent<MovementLogic>().IsUnityNull()) { GetComponent<MovementLogic>().Death(); }
+        if (!movementLogic.IsUnityNull()) { movementLogic.Death(); }
         if (!GetComponent<PlayerLogic>().IsUnityNull()) { GetComponent<PlayerLogic>().enabled = false; }
         if (!GetComponent<BotLogic>().IsUnityNull()) { GetComponent<BotLogic>().enabled = false; }
         if (!GetComponent<PlayerInput>().IsUnityNull()) { GetComponent<PlayerInput>().enabled = false; }
     }
 
+
+
+    private bool IsBlocking(GameObject attacker)
+    {
+        int block_state = movementLogic.BlockingState();
+        if (block_state == -1) { return false; }
+        if (block_state == 0 && attacker.transform.position.x <= transform.position.x) { return true; }
+        if (block_state == 1 && attacker.transform.position.x > transform.position.x)  { return true; }
+        return false;
+    }
 
 
     public bool IsPlayerDead() { return PlayerDead; }

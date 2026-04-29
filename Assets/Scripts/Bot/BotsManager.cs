@@ -420,13 +420,15 @@ public class BotsManager : MonoBehaviour
 
     public float GetLadderHeight(Transform ladder)
     {
+        float final_scale;
         for (int y = 0; y < Zones.Count;y++)
         {
             for (int x = 0; x < Zones[y].transform.childCount;x++)
             {
                 if (Zones[y].transform.GetChild(x).tag == "ShipTrigger_Ladder" && Zones[y].transform.GetChild(x).transform.position == ladder.position)
                 {
-                    return Zones[y].transform.GetChild(x).transform.localScale.y*2;
+                    final_scale = Zones[y].transform.GetChild(x).transform.localScale.y;
+                    return final_scale * Zones[y].transform.GetChild(x).GetComponent<BoxCollider2D>().size.y;
                 }
             }
         }
@@ -486,7 +488,7 @@ public class BotsManager : MonoBehaviour
     private bool IsTagDefensible(string cur_tag)
     {
         if (cur_tag == "ShipTrigger_Cannon") { return true; }
-        else if (cur_tag == "ShipTrigger_Treasure") { return true; }
+        else if (cur_tag == "ShipTrigger_Chest") { return true; }
 
         return false;
     }
@@ -512,18 +514,18 @@ public class BotsManager : MonoBehaviour
 
     private void GetAllBotStats()
     {
-        BotGlobal_CurrentActive  = 0;
+        BotGlobal_CurrentActive = 0;
         BotGlobal_CurrentOffense = 0;
         BotGlobal_CurrentDefense = 0;
 
         foreach (Transform bot in Crew.transform)
         {
-            if (bot.gameObject.activeSelf) { 
-
+            if (bot.gameObject.activeSelf && !bot.gameObject.GetComponent<HealthManager>().IsPlayerDead()) { 
                 BotGlobal_CurrentActive++; 
                 if (bot.gameObject.GetComponent<BotLogic>().GetBehavior() == BotFlag_Offense)      { BotGlobal_CurrentOffense++; }
                 else if (bot.gameObject.GetComponent<BotLogic>().GetBehavior() == BotFlag_Defense) { BotGlobal_CurrentDefense++; }
             }
+
         }
     }
 
@@ -534,7 +536,9 @@ public class BotsManager : MonoBehaviour
         List<Transform> awake_bots = new List<Transform>();
         foreach (Transform bot in Crew.transform)
         {
-            if (bot.gameObject.activeSelf) { awake_bots.Add(bot); }
+            if (bot.gameObject.activeSelf) { 
+                awake_bots.Add(bot);
+            }
         }
         UpdateBotsOffense(awake_bots);
         UpdateBotsDefense(awake_bots);
@@ -547,8 +551,8 @@ public class BotsManager : MonoBehaviour
         float offense_ratio;
         for (int i = 0; i < awake_bots.Count;i++)
         {
-            offense_ratio = BotGlobal_CurrentOffense / BotGlobal_CurrentActive;
-            //Debug.Log("offense_ratio = "+offense_ratio + " = "+BotGlobal_CurrentOffense+" / "+BotGlobal_CurrentActive);
+            offense_ratio = (float)BotGlobal_CurrentOffense / (float)BotGlobal_CurrentActive;
+            Debug.Log("offense_ratio = "+offense_ratio + " = "+BotGlobal_CurrentOffense+" / "+BotGlobal_CurrentActive);
 
             if (offense_ratio < BotGlobal_OffensePercent && awake_bots[i].gameObject.GetComponent<BotLogic>().GetBehavior() != 1)
             {
@@ -600,8 +604,10 @@ public class BotsManager : MonoBehaviour
 
         if (players_old_zone != PlayersCurrentZoneLevel) 
         {
+            Debug.Log("Player is now on level "+PlayersCurrentZoneLevel+"!");
             foreach (Transform bot in Crew.transform)
             {
+                Debug.Log("Updating for "+bot.gameObject.name);
                 bot.gameObject.GetComponent<BotLogic>().UpdatePlayerLevel(PlayersCurrentZoneLevel);
             }
         }

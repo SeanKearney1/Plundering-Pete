@@ -79,6 +79,7 @@ public class BotLogic : MonoBehaviour
     private float MinDistanceToCheckPoint = 0.25f;
     private int NextObjectiveMove = -1;
     private int NextObjectiveMoveType = -1;
+    private bool PreActionIdle = false; // Used for things like POSSIBLY idling ONCE before attacking.
     private float IdleTimer = 0;
     private float IdleCooldownMax = 3;
     private float IdleCooldown = 0;
@@ -188,7 +189,7 @@ public class BotLogic : MonoBehaviour
         if (IdleTimer > 0) { IdleTimer -= Time.deltaTime; }
         else if (IdleTimer < 0) { IdleTimer = 0; }
 
-        if (IdleTimer == 0) {
+        if (IdleTimer == 0 && !movementLogic.IsInCombo()) {
             if (IdleCooldown > 0) { IdleCooldown -= Time.deltaTime; }
             else if (IdleCooldown < 0) { IdleCooldown = 0; }
         }
@@ -257,7 +258,9 @@ public class BotLogic : MonoBehaviour
     // Climbing a ladder, attacking, reaching an objective, shooting a cannon.
     private void CompletedAnAction()
     {
-        if (IdleCooldown == 0 && Behavior_Aggression < UnityEngine.Random.Range(0,1f)) { SetIdleTimer(); }
+        float rand = UnityEngine.Random.Range(0,1f);
+        Debug.Log(Behavior_Aggression+" < "+rand);
+        if (Behavior_Aggression < rand) { SetIdleTimer(); } //IdleCooldown == 0 && 
     }
 
 
@@ -266,9 +269,11 @@ public class BotLogic : MonoBehaviour
         float max = TheBotsManager.GetComponent<BotsManager>().BotBehaviorRange_IdleTimerMax;
         float min = TheBotsManager.GetComponent<BotsManager>().BotBehaviorRange_IdleTimerMin;
 
-        IdleTimer = min + ((max - 1) * UnityEngine.Random.Range(0, 1 - Behavior_Intellect));
+        IdleTimer = UnityEngine.Random.Range(min, max); // min + ((max - 1) * UnityEngine.Random.Range(0, 1 - Behavior_Intellect));
 
         IdleCooldown = IdleCooldownMax;
+
+        // 1 + ((5 - 1) * 0.5 )
         
     }
 
@@ -297,6 +302,7 @@ public class BotLogic : MonoBehaviour
 
         RouteRecalculationNeeded = false;
 
+        Debug.Log("Calculating path from level "+cur_level+" to level "+level_destination);
         FoundObjective = false;
         DesiredPath = CalculatePath(DesiredPosition, cur_pos, checkpoints, VisitedLadders, level_destination, cur_level);
 
@@ -322,11 +328,15 @@ public class BotLogic : MonoBehaviour
             else if (BehaviorState == 2) // Defense
             {
                 GameObject defenseObject = TheBotsManager.GetAnOpenDefensivePart();
-                ObjectivesCurrentZoneLevel = TheBotsManager.GetObjectLevel(defenseObject.transform, defenseObject.tag);
-
-                defenseObject.GetComponent<DefensiveShipPartInfo>().SetOwner(gameObject);
-
-                return defenseObject.transform.position;
+                if (!defenseObject.IsUnityNull()) {
+                    ObjectivesCurrentZoneLevel = TheBotsManager.GetObjectLevel(defenseObject.transform, defenseObject.tag);
+                    defenseObject.GetComponent<DefensiveShipPartInfo>().SetOwner(gameObject);
+                    return defenseObject.transform.position;
+                }
+                else { 
+                    SetIdleTimer();
+                    return transform.position;
+                } 
             }
         }
         else if (BehaviorOverride == 1) // Retreat
@@ -367,9 +377,15 @@ public class BotLogic : MonoBehaviour
             
             if (CanReachPath(cur_pos, new Vector2(final_pos.x, cur_pos.y)))
             {
-                //Debug.DrawLine(cur_pos, new Vector2(final_pos.x, cur_pos.y), Color.white, 100f);
+                //Debug.Log("Can see objective "+final_pos+" from "+cur_pos);
+                Debug.DrawLine(cur_pos, new Vector2(final_pos.x, cur_pos.y), Color.blueViolet, 10f);
                 FoundObjective = true;
                 return checkpoints;
+            }
+            else
+            {
+                //Debug.Log("Can't see objective "+final_pos+" from "+cur_pos);
+                Debug.DrawLine(cur_pos, new Vector2(final_pos.x, cur_pos.y), Color.red, 10f);
             }
         }
 
@@ -408,7 +424,7 @@ public class BotLogic : MonoBehaviour
         }
         ladders = SortLaddersByDistance(ladders, cur_pos.x);
 
-
+        Debug.Log("ladders.Count = "+ladders.Count);
 
 
         for (int i = 0; i < ladders.Count;i++)
@@ -581,8 +597,16 @@ public class BotLogic : MonoBehaviour
         if (!InRangeToDoObjective(ThePlayer.transform.position)) { WalkTowardsObjective(ThePlayer.transform.position); }
         else
         {
-            movementLogic.flipSprite(ThePlayer.transform.position.x - transform.position.x);
-            SetCombo();
+            if (!PreActionIdle) { 
+                CompletedAnAction();
+                PreActionIdle = true;
+            }
+            if (IdleTimer == 0) {
+                movementLogic.flipSprite(ThePlayer.transform.position.x - transform.position.x);
+                SetCombo();
+                CompletedAnAction();
+                PreActionIdle = false;
+            }
         }
     }
 
@@ -610,6 +634,7 @@ public class BotLogic : MonoBehaviour
             NextObjectiveMove = 2;
             fail_counter++;
         }
+        if (fail_counter >= 20) { NextObjectiveMove = 2; }
         NextObjectiveMoveType = GetMoveType();
 
         Debug.Log("Chose Attack "+NextObjectiveMove+" of type "+NextObjectiveMoveType);
@@ -648,8 +673,11 @@ public class BotLogic : MonoBehaviour
 
     private void DefendObjective()
     {
-        if (transform.position.x < DesiredPosition.x) { Look.x = 1; }
-        else { Look.x = -1; }
+        if (Math.Abs(transform.position.x - DesiredPosition.x) > 0.5f)
+        {
+            if (transform.position.x < DesiredPosition.x) { Look.x = 1; }
+            else { Look.x = -1; }            
+        }
     }
 
 
@@ -838,10 +866,7 @@ public class BotLogic : MonoBehaviour
         }
 
         // Checks to see if bot is finished with the ladder.
-        else if (LadderFinishedValidator( CurLadder))
-        {
-            LadderFinished();
-        }
+        else if (LadderFinishedValidator(CurLadder)) { LadderFinished(); }
 
         // Ladder Movement Logic: Down, Up
         if (CurrentLadderDirection == 0) { IsDucking = true; }

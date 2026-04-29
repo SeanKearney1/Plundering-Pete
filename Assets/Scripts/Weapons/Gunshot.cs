@@ -57,7 +57,7 @@ public class Gunshot : MonoBehaviour
         private void FireBullet()
     {
         ContactFilter2D contactFilter = new ContactFilter2D();
-        RaycastHit2D[] results = new RaycastHit2D[2];
+        RaycastHit2D[] results = new RaycastHit2D[32];
 
         contactFilter.useTriggers = true;
         contactFilter.useLayerMask = true;
@@ -72,12 +72,12 @@ public class Gunshot : MonoBehaviour
         for (int i = 0; i < results.Length; i++) {
             if (!results[i].collider.IsUnityNull() && results[i].collider.gameObject.tag == "HitBox")
             {
-
-                Debug.Log("target.name = "+results[i].collider.name);
-                if (results[i].collider.transform.parent.GetComponent<HealthManager>()) 
+                if (ValidateVictim(results[i].collider.transform.parent))
                 {
+                    Debug.Log("target.name = "+results[i].collider.name);
                     results[i].collider.transform.parent.GetComponent<HealthManager>().TookDamage(1,Owner);
-                }            
+                    break;
+                }           
             }
         }
     }
@@ -94,5 +94,16 @@ public class Gunshot : MonoBehaviour
         if (Direction.x > 0) { start_pos.x += GeneralGameInfo.Const_BulletDistance; }
         else { start_pos.x -= GeneralGameInfo.Const_BulletDistance; }
         return start_pos;
+    }
+
+
+
+
+    private bool ValidateVictim(Transform victim)
+    {
+        if (!victim.GetComponent<HealthManager>()) { return false; }
+        if (victim.GetComponent<BotLogic>() && Owner.GetComponent<BotLogic>()) { return false; }
+        if (!victim.GetComponent<BotLogic>() && !Owner.GetComponent<BotLogic>()) { return false; }
+        return true;
     }
 }

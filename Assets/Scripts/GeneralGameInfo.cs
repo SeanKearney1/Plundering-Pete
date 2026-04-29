@@ -25,9 +25,10 @@ public class GeneralGameInfo : ScriptableObject
     public static float Const_MinDamageToKO = 25f;
     public static float Const_MaxGrenadeDistance = 3.5f;
     public static float Const_MinGrenadeDistance = 1.75f;
-    public static float Const_MaxGrappleDistance = 100f;
-    public static float Const_GrappleSpeed = 10f;
+    public static float Const_MaxGrappleDistance = 30f;
+    public static float Const_GrappleSpeed = 20f;
     public static float Const_MinDistanceToGrapplePoint = 1f;
+    public static float Const_VerticalGrappleBias = 2f;
 
 
     public static LayerMask Const_HullMask;
