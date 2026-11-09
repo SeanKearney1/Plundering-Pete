@@ -537,7 +537,8 @@ public class BotLogic : MonoBehaviour
 
     private bool InRangeToDoObjective(Vector2 objective_pos)
     {   
-        float cur_distance = (new Vector2(transform.position.x,transform.position.y) - objective_pos).magnitude;
+        //float cur_distance = (new Vector2(transform.position.x,transform.position.y) - objective_pos).magnitude;
+        float cur_distance = Math.Abs(transform.position.x - objective_pos.x);
         float min_distance = -1;
 
         if (NextObjectiveMoveType == 1) { min_distance = MeleeAttackDistance; } // Melee
@@ -547,8 +548,6 @@ public class BotLogic : MonoBehaviour
         if (min_distance != -1 && cur_distance > min_distance) { return false; }
         return true;
     }
-
-
 
 
 
@@ -917,7 +916,6 @@ public class BotLogic : MonoBehaviour
             else { Look.x = -1; }
         }
     }
-
 
 
 

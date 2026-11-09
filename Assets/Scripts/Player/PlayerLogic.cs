@@ -5,8 +5,8 @@ using UnityEngine;
 public class PlayerLogic : MonoBehaviour
 {
 
-    private int OldZone;
-    private int CurZone;
+    private int OldZone = -1;
+    private int CurZone = -1;
     private GameObject Poseidon;
     private GameObject Camera;
 
